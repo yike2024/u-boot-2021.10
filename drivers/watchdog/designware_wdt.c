@@ -9,21 +9,48 @@
 #include <reset.h>
 #include <wdt.h>
 #include <asm/io.h>
+#include <linux/io.h>
 #include <linux/bitops.h>
+#if IS_ENABLED(CONFIG_TARGET_CVITEK_CV181X)
+#include "../../board/cvitek/cv181x/cv181x_reg.h"
+#elif IS_ENABLED(CONFIG_TARGET_CVITEK_CV180X)
+#include "../../board/cvitek/cv180x/cv180x_reg.h"
+#elif IS_ENABLED(CONFIG_TARGET_CVITEK_ATHENA2)
+#include "../../board/cvitek/athena2/athena2_reg.h"
+#endif
 
 #define DW_WDT_CR	0x00
 #define DW_WDT_TORR	0x04
+#define DW_WDT_CCVR 0x08
 #define DW_WDT_CRR	0x0C
+#define DW_WDT_TOC	0x1C
 
 #define DW_WDT_CR_EN_OFFSET	0x00
 #define DW_WDT_CR_RMOD_OFFSET	0x01
 #define DW_WDT_CRR_RESTART_VAL	0x76
+
+#define DW_WDT_MAX_TOP          15
 
 struct designware_wdt_priv {
 	void __iomem	*base;
 	unsigned int	clk_khz;
 	struct reset_ctl_bulk resets;
 };
+
+static inline int dw_wdt_top_in_ms(unsigned int clk_khz, unsigned int top)
+{
+	/*
+	* There are 16 possible timeout values in 0..15 where the number of
+	* cycles is 2 ^ (16 + i) and the watchdog counts down.
+	*/
+	return (1U << (16 + top)) / clk_khz;
+}
+
+static inline int dw_wdt_top_xlate_toc(unsigned int clk_khz, unsigned int top, unsigned int top_val)
+{
+	// T = WDT_TOC <<( WDT_TORR +1) when TOR_MODE = 1
+	return ((top * clk_khz) >> (top_val + 1)) + 1;// approximate value
+}
 
 /*
  * Set the watchdog time interval.
@@ -32,23 +59,30 @@ struct designware_wdt_priv {
 static int designware_wdt_settimeout(void __iomem *base, unsigned int clk_khz,
 				     unsigned int timeout)
 {
-	signed int i;
+	int i, top_val = DW_WDT_MAX_TOP;
+	unsigned int toc;
 
 	/* calculate the timeout range value */
-	i = fls(timeout * clk_khz - 1) - 16;
-	i = clamp(i, 0, 15);
+	for (i = 0; i <= DW_WDT_MAX_TOP; ++i)
+		if (dw_wdt_top_in_ms(clk_khz, i) >= timeout) {
+			top_val = i - 1;
+			break;
+		}
 
-	writel(i | (i << 4), base + DW_WDT_TORR);
+	toc = dw_wdt_top_xlate_toc(clk_khz, timeout, top_val);
+
+	writel(top_val | (top_val << 4), base + DW_WDT_TORR);
+	writel(toc, base + DW_WDT_TOC);
 
 	return 0;
 }
 
 static void designware_wdt_enable(void __iomem *base)
 {
-	writel(BIT(DW_WDT_CR_EN_OFFSET), base + DW_WDT_CR);
+	writel(BIT(DW_WDT_CR_EN_OFFSET) | BIT(6) | BIT(7), base + DW_WDT_CR);
 }
 
-static unsigned int designware_wdt_is_enabled(void __iomem *base)
+static inline unsigned int designware_wdt_is_enabled(void __iomem *base)
 {
 	return readl(base + DW_WDT_CR) & BIT(0);
 }
@@ -91,22 +125,17 @@ static int designware_wdt_reset(struct udevice *dev)
 
 static int designware_wdt_stop(struct udevice *dev)
 {
-	struct designware_wdt_priv *priv = dev_get_priv(dev);
+	void __iomem    *reg;
 
 	designware_wdt_reset(dev);
-	writel(0, priv->base + DW_WDT_CR);
 
-        if (CONFIG_IS_ENABLED(DM_RESET)) {
-		int ret;
+	reg = ioremap(REG_SOFT_RST, PAGE_SIZE);
+	if (!reg)
+		return -EINVAL;
 
-		ret = reset_assert_bulk(&priv->resets);
-		if (ret)
-			return ret;
-
-		ret = reset_deassert_bulk(&priv->resets);
-		if (ret)
-			return ret;
-	}
+	writel(0xFEFFFFFF, reg + 0x8);
+	writel(0xFFFFFFFF, reg + 0x8);
+	iounmap(reg);
 
 	return 0;
 }
@@ -125,6 +154,43 @@ static int designware_wdt_start(struct udevice *dev, u64 timeout, ulong flags)
 	/* reset the watchdog */
 	return designware_wdt_reset(dev);
 }
+
+static int designware_wdt_expire_now(struct udevice *dev, ulong flags)
+{
+	struct designware_wdt_priv *priv = dev_get_priv(dev);
+
+	if (designware_wdt_is_enabled(priv->base)) {
+		printf("expire: %d (ms)\n", readl(priv->base + DW_WDT_CCVR)/priv->clk_khz);
+	} else {
+		printf("expire : -1\n");
+	}
+
+	return 0;
+}
+
+#if 0 // UNNEED
+static inline int enable_wdt_reset_system(void)
+{
+	void __iomem    *reg;
+	unsigned int val;
+
+	/* set ((TOP_BASE + 8), 0x4); */
+	reg = ioremap(TOP_BASE, PAGE_SIZE);
+	if (!reg)
+		return -EINVAL;
+
+	val = readl((reg + CV_TOP_WDT_OFFSET));
+	val |= CV_TOP_WDT_VAL;
+	writel(val, (reg + CV_TOP_WDT_OFFSET));
+
+	val = readl((reg + 0x1a8));
+	val |= 0x7;
+	writel(val, (reg + 0x1a8));
+	iounmap(reg);
+
+	return 0;
+}
+#endif
 
 static int designware_wdt_probe(struct udevice *dev)
 {
@@ -155,21 +221,11 @@ static int designware_wdt_probe(struct udevice *dev)
 	priv->clk_khz = CONFIG_DW_WDT_CLOCK_KHZ;
 #endif
 
-	if (CONFIG_IS_ENABLED(DM_RESET)) {
-		ret = reset_get_bulk(dev, &priv->resets);
-		if (ret)
-			goto err;
-
-		ret = reset_deassert_bulk(&priv->resets);
-		if (ret)
-			goto err;
-	}
-
 	/* reset to disable the watchdog */
 	return designware_wdt_stop(dev);
 
-err:
 #if CONFIG_IS_ENABLED(CLK)
+err:
 	clk_free(&clk);
 #endif
 	return ret;
@@ -179,6 +235,7 @@ static const struct wdt_ops designware_wdt_ops = {
 	.start = designware_wdt_start,
 	.reset = designware_wdt_reset,
 	.stop = designware_wdt_stop,
+	.expire_now = designware_wdt_expire_now,
 };
 
 static const struct udevice_id designware_wdt_ids[] = {

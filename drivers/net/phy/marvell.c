@@ -406,10 +406,17 @@ static int m88e151x_config(struct phy_device *phydev)
 /* Marvell 88E1118 */
 static int m88e1118_config(struct phy_device *phydev)
 {
+	u16 reg = 0;
 	/* Change Page Number */
 	phy_write(phydev, MDIO_DEVAD_NONE, MIIM_88E1118_PHY_PAGE, 0x0002);
 	/* Delay RGMII TX and RX */
 	phy_write(phydev, MDIO_DEVAD_NONE, 0x15, 0x1070);
+#if IS_ENABLED(CONFIG_TARGET_CVITEK_ATHENA2_FPGA)
+	phy_write(phydev, MDIO_DEVAD_NONE, 0x15, 0x1040);
+	reg = phy_read(phydev, MDIO_DEVAD_NONE, MII_BMCR);
+	reg |= BMCR_RESET;
+	phy_write(phydev, MDIO_DEVAD_NONE, MII_BMCR, reg);
+#endif
 	/* Change Page Number */
 	phy_write(phydev, MDIO_DEVAD_NONE, MIIM_88E1118_PHY_PAGE, 0x0003);
 	/* Adjust LED control */
@@ -423,7 +430,6 @@ static int m88e1118_config(struct phy_device *phydev)
 static int m88e1118_startup(struct phy_device *phydev)
 {
 	int ret;
-
 	/* Change Page Number */
 	phy_write(phydev, MDIO_DEVAD_NONE, MIIM_88E1118_PHY_PAGE, 0x0000);
 

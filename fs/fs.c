@@ -530,6 +530,10 @@ static int _fs_read(const char *filename, ulong addr, loff_t offset, loff_t len,
 	void *buf;
 	int ret;
 
+#ifdef CONFIG_ROOTFS_UBUNTU
+	printf("fs reading: %s\n", filename);
+#endif
+
 #ifdef CONFIG_LMB
 	if (do_lmb_check) {
 		ret = fs_read_lmb_check(filename, addr, offset, len, info);
@@ -746,7 +750,7 @@ int do_load(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[],
 		pos = 0;
 
 	time = get_timer(0);
-	ret = _fs_read(filename, addr, pos, bytes, 1, &len_read);
+	ret = _fs_read(filename, addr, pos, bytes, 0, &len_read);
 	time = get_timer(time);
 	if (ret < 0) {
 		log_err("Failed to load '%s'\n", filename);

@@ -13,7 +13,7 @@ static int do_exit(struct cmd_tbl *cmdtp, int flag, int argc,
 	if (argc > 1)
 		return dectoul(argv[1], NULL);
 
-	return 0;
+	return -2;
 }
 
 U_BOOT_CMD(

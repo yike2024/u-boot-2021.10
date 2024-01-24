@@ -69,3 +69,11 @@ U_BOOT_CMD(
 	""
 );
 #endif
+
+
+U_BOOT_CMD(
+	reset_c906b, 3, 2, do_reset_c906b,
+	"reset the AP C906B",
+	"Usage: bring up and reset_c906b\n"
+	"     - reset_c906b [CPU core] [rvba addr]\n"
+)

@@ -505,6 +505,9 @@ int phy_init(void)
 #ifdef CONFIG_PHY_CORTINA_ACCESS
 	phy_cortina_access_init();
 #endif
+#ifdef CONFIG_PHY_CVITEK
+	phy_cvitek_init();
+#endif
 #ifdef CONFIG_PHY_DAVICOM
 	phy_davicom_init();
 #endif

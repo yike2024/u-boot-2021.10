@@ -979,6 +979,15 @@ config CMD_GPT_RENAME
 	  partitions via the 'gpt swap' command or to rename single
 	  partitions via the 'rename' command.
 
+config BOOTLOGO
+        bool "Show bootlogo"
+    select CMD_CVI_JPEG
+        help
+      Show bootlogo when uboot is booting.
+          This provides a way to show bootlogo which is saved in MISC partition.
+          When enable this command it will add a new environment variable showlogo
+      and will add the showlogo to the beginning of bootcmd
+
 config CMD_IDE
 	bool "ide - Support for IDE drivers"
 	select IDE
@@ -2389,6 +2398,46 @@ config CMD_UBIFS
 	help
 	  UBIFS is a file system for flash devices which works on top of UBI.
 
+config CMD_BM_SAVELOG
+	bool "Bitmain savelog command support"
+	depends on CONSOLE_RECORD
+	default y
+	help
+	  Support the flash script can savelog
+	  into mmc when uboot flashing. The maximum
+	  size of the log saved into mmc is the value
+	  defined by CONFIG_CONSOLE_RECORD_OUT_SIZE.
+	  If CONFIG_CONSOLE_RECORD_OUT_SIZE is set to
+	  0x2000, then CONFIG_SYS_MALLOC_F_LEN should be set
+	  larger than 0x3000.
+
+config CMD_CVI_VO
+        bool "VO command supports mars"
+        depends on VIDEO_CVITEK
+        help
+          Support for the cv1835 vo interface.
+          This includes controls of vo interface/timing, video layer.
+          startvo: start interface.
+          stopvo: stop interface.
+          startvl: start video layer reading from ddr.
+          stopvl: stop video layer.
+          setvobg: set bgcolor.
+
+config CMD_CVI_JPEG
+        bool "CVI JPEG decoder"
+        help
+          Support for the jpeg decorder
+          uboot will check the jpeg file, alloc buffer
+          and decode jpg file to yuv format to the
+          destination address
+
+config CMD_CVI_UPDATE
+	bool "cvitek update command"
+	default y
+	help
+	uboot will check flag in SRAM and thendecide if it's sd,usb,usb drive or Ethernet upgrade.
+	User can run cvi_update [usb/sd/eth] for force update without check flag.
+
 config MMC_SPEED_MODE_SET
 	bool "set speed mode using mmc command"
 	depends on CMD_MMC
@@ -2399,4 +2448,10 @@ config MMC_SPEED_MODE_SET
 	  and is indicated using the index from enum bus_mode in
 	  include/mmc.h. A speed mode can be set only if it has already
 	  been enabled in the device tree.
+
+config CMD_SE9LED_SET
+	bool "SE9 led command support"
+	help
+	  Provides support for turning on or off the SE9 status led and
+	  the error led in the UBOOT command line.
 endmenu
