@@ -9,6 +9,7 @@
 #define __CVI_PANEL_H__
 
 #include "cvi_i80.h"
+#include "cvi_i80_hw.h"
 #include "cvi_lvds.h"
 
 struct panel_desc_s {
@@ -21,6 +22,7 @@ struct panel_desc_s {
 	const struct _VO_I80_INSTR_S *i80_init_cmds;
 	int i80_init_cmds_size;
 	struct cvi_lvds_cfg_s *lvds_cfg;
+	const struct VO_I80_HW_CFG_S *i80_hw_cfg;
 };
 
 #ifdef MIPI_PANEL_HX8394
@@ -128,6 +130,11 @@ static struct panel_desc_s panel_desc = {
 	.i80_cfg = &i80_st7789v_cfg,
 	.i80_init_cmds = i80_st7789v_init_cmds,
 	.i80_init_cmds_size = ARRAY_SIZE(i80_st7789v_init_cmds)
+};
+#elif defined(I80_PANEL_ST7789V3)
+#include "i80_hw_st7789v3.h"
+static struct panel_desc_s panel_desc = {
+	.i80_hw_cfg = &st7789v3_cfg,
 };
 #elif defined(LVDS_PANEL_EK79202)
 #include "lvds_ek79202.h"

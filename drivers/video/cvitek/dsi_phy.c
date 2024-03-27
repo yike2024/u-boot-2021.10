@@ -109,7 +109,8 @@ void dphy_init(enum sclr_vo_intf intf)
 	_reg_write(reg_base + REG_DSI_PHY_ESC_INIT, 0x100);
 	_reg_write(reg_base + REG_DSI_PHY_ESC_WAKE, 0x100);
 
-	if ((intf == SCLR_VO_INTF_BT656) || (intf == SCLR_VO_INTF_BT1120) || (intf == SCLR_VO_INTF_I80))
+	if (intf == SCLR_VO_INTF_BT656 || intf == SCLR_VO_INTF_BT1120 ||
+	    intf == SCLR_VO_INTF_I80 || intf == SCLR_VO_INTF_I80_HW)
 		_reg_write(reg_base + REG_DSI_PHY_EXT_GPIO, 0x000fffff);
 	else
 		_reg_write(reg_base + REG_DSI_PHY_EXT_GPIO, 0x0);
@@ -167,6 +168,11 @@ void _cal_pll_reg(u32 clkkHz, u32 VCOR_10000, u32 *reg_txpll, u32 *reg_set, u32 
 		reg_disp_div_sel, reg_divout_sel, reg_div_sel, *reg_set);
 #endif
 	pr_info("vip_sy : bt_div(%d)\n", bt_div);
+}
+
+void vip_sys_clk_setting(u32 value)
+{
+	vip_sys_reg_write_mask(VIP_SYS_VIP_CLK_CTRL0, 0xFFFFFFFF, value);
 }
 
 void dphy_lvds_set_pll(u32 clkkHz, u8 link)
