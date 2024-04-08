@@ -39,6 +39,7 @@ int display_enable(struct udevice *dev, int panel_bpp,
 	return 0;
 }
 
+#if 0
 static bool display_mode_valid(void *priv, const struct display_timing *timing)
 {
 	struct udevice *dev = priv;
@@ -49,6 +50,7 @@ static bool display_mode_valid(void *priv, const struct display_timing *timing)
 
 	return true;
 }
+#endif
 
 int display_read_timing(struct udevice *dev, struct display_timing *timing)
 {
@@ -65,10 +67,12 @@ int display_read_timing(struct udevice *dev, struct display_timing *timing)
 	ret = ops->read_edid(dev, buf, sizeof(buf));
 	if (ret < 0)
 		return ret;
-
+#if 0
 	return edid_get_timing_validate(buf, ret, timing,
 					&panel_bits_per_colour,
 					display_mode_valid, dev);
+#endif
+	return edid_get_timing(buf, ret, timing, &panel_bits_per_colour);
 }
 
 bool display_in_use(struct udevice *dev)

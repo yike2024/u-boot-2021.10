@@ -282,7 +282,7 @@ static int passwd_abort_key(uint64_t etime)
 				memcmp(presskey + presskey_len -
 					delaykey[i].len, delaykey[i].str,
 					delaykey[i].len) == 0) {
-					debug_bootkeys("got %skey\n",
+				debug_bootkeys("got %skey\n",
 						delaykey[i].retry ? "delay" :
 						"stop");
 
@@ -456,9 +456,8 @@ const char *bootdelay_process(void)
 	bootretry_init_cmd_timeout();
 
 #ifdef CONFIG_POST
-	if (gd->flags & GD_FLG_POSTFAIL) {
+	if (gd->flags & GD_FLG_POSTFAIL)
 		s = env_get("failbootcmd");
-	} else
 #endif /* CONFIG_POST */
 	if (bootcount_error())
 		s = env_get("altbootcmd");
@@ -486,6 +485,10 @@ void autoboot_command(const char *s)
 		if (lock)
 			prev = disable_ctrlc(1); /* disable Ctrl-C checking */
 
+#if (!defined CONFIG_TARGET_CVITEK_CV181X_FPGA) && (!defined CONFIG_TARGET_CVITEK_CV186X_FPGA) && \
+	(!defined CV186X_FPGA_PALLDIUM_ENV)
+		board_save_time_record(TIME_RECORDS_FIELD_BOOTCMD_START);
+#endif
 		run_command_list(s, -1, 0);
 
 		if (lock)

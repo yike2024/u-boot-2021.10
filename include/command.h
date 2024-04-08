@@ -173,6 +173,8 @@ int common_diskboot(struct cmd_tbl *cmdtp, const char *intf, int argc,
 
 int do_reset(struct cmd_tbl *cmdtp, int flag, int argc,
 	     char *const argv[]);
+int do_reset_c906b(struct cmd_tbl *cmdtp, int flag, int argc,
+		 char *const argv[]);
 int do_poweroff(struct cmd_tbl *cmdtp, int flag, int argc,
 		char *const argv[]);
 

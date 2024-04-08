@@ -125,20 +125,26 @@ static void announce_and_cleanup(int fake)
 	dm_remove_devices_flags(DM_REMOVE_ACTIVE_ALL);
 
 	cleanup_before_linux();
+
+#if (!defined CONFIG_TARGET_CVITEK_CV181X_FPGA) && (!defined CONFIG_TARGET_CVITEK_CV186X_FPGA) && \
+	(!defined CV186X_FPGA_PALLDIUM_ENV)
+	// Save kernel start time
+	board_save_time_record(TIME_RECORDS_FIELD_KERNEL_START);
+#endif
 }
 
-static void setup_start_tag (struct bd_info *bd)
+static void setup_start_tag(struct bd_info *bd)
 {
 	params = (struct tag *)bd->bi_boot_params;
 
 	params->hdr.tag = ATAG_CORE;
-	params->hdr.size = tag_size (tag_core);
+	params->hdr.size = tag_size(tag_core);
 
 	params->u.core.flags = 0;
 	params->u.core.pagesize = 0;
 	params->u.core.rootdev = 0;
 
-	params = tag_next (params);
+	params = tag_next(params);
 }
 
 static void setup_memory_tags(struct bd_info *bd)
@@ -147,12 +153,12 @@ static void setup_memory_tags(struct bd_info *bd)
 
 	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++) {
 		params->hdr.tag = ATAG_MEM;
-		params->hdr.size = tag_size (tag_mem32);
+		params->hdr.size = tag_size(tag_mem32);
 
 		params->u.mem.start = bd->bi_dram[i].start;
 		params->u.mem.size = bd->bi_dram[i].size;
 
-		params = tag_next (params);
+		params = tag_next(params);
 	}
 }
 
@@ -174,11 +180,11 @@ static void setup_commandline_tag(struct bd_info *bd, char *commandline)
 
 	params->hdr.tag = ATAG_CMDLINE;
 	params->hdr.size =
-		(sizeof (struct tag_header) + strlen (p) + 1 + 4) >> 2;
+		(sizeof(struct tag_header) + strlen(p) + 1 + 4) >> 2;
 
-	strcpy (params->u.cmdline.cmdline, p);
+	strcpy(params->u.cmdline.cmdline, p);
 
-	params = tag_next (params);
+	params = tag_next(params);
 }
 
 static void setup_initrd_tag(struct bd_info *bd, ulong initrd_start,
@@ -188,12 +194,12 @@ static void setup_initrd_tag(struct bd_info *bd, ulong initrd_start,
 	 * ramdisk can be found. ATAG_RDIMG is a better name, actually.
 	 */
 	params->hdr.tag = ATAG_INITRD2;
-	params->hdr.size = tag_size (tag_initrd);
+	params->hdr.size = tag_size(tag_initrd);
 
 	params->u.initrd.start = initrd_start;
 	params->u.initrd.size = initrd_end - initrd_start;
 
-	params = tag_next (params);
+	params = tag_next(params);
 }
 
 static void setup_serial_tag(struct tag **tmp)
@@ -203,10 +209,10 @@ static void setup_serial_tag(struct tag **tmp)
 
 	get_board_serial(&serialnr);
 	params->hdr.tag = ATAG_SERIAL;
-	params->hdr.size = tag_size (tag_serialnr);
+	params->hdr.size = tag_size(tag_serialnr);
 	params->u.serialnr.low = serialnr.low;
-	params->u.serialnr.high= serialnr.high;
-	params = tag_next (params);
+	params->u.serialnr.high = serialnr.high;
+	params = tag_next(params);
 	*tmp = params;
 }
 
@@ -216,9 +222,9 @@ static void setup_revision_tag(struct tag **in_params)
 
 	rev = get_board_rev();
 	params->hdr.tag = ATAG_REVISION;
-	params->hdr.size = tag_size (tag_revision);
+	params->hdr.size = tag_size(tag_revision);
 	params->u.revision.rev = rev;
-	params = tag_next (params);
+	params = tag_next(params);
 }
 
 static void setup_end_tag(struct bd_info *bd)
@@ -247,9 +253,8 @@ static void boot_prep_linux(bootm_headers_t *images)
 	if (IMAGE_ENABLE_OF_LIBFDT && images->ft_len) {
 #ifdef CONFIG_OF_LIBFDT
 		debug("using: FDT\n");
-		if (image_setup_linux(images)) {
+		if (image_setup_linux(images))
 			panic("FDT creation failed!");
-		}
 #endif
 	} else if (BOOTM_ENABLE_TAGS) {
 		debug("using: ATAGS\n");
@@ -358,7 +363,6 @@ static void boot_jump_linux(bootm_headers_t *images, int flag)
 		do_nonsec_virt_switch();
 
 		update_os_arch_secondary_cores(images->os.arch);
-
 #ifdef CONFIG_ARMV8_SWITCH_TO_EL1
 		armv8_switch_to_el2((u64)images->ft_addr, 0, 0, 0,
 				    (u64)switch_to_el1, ES_TO_AARCH64);
@@ -385,6 +389,7 @@ static void boot_jump_linux(bootm_headers_t *images, int flag)
 	kernel_entry = (void (*)(int, int, uint))images->ep;
 #ifdef CONFIG_CPU_V7M
 	ulong addr = (ulong)kernel_entry | 1;
+
 	kernel_entry = (void *)addr;
 #endif
 	s = env_get("machid");
@@ -396,8 +401,8 @@ static void boot_jump_linux(bootm_headers_t *images, int flag)
 		printf("Using machid 0x%lx from environment\n", machid);
 	}
 
-	debug("## Transferring control to Linux (at address %08lx)" \
-		"...\n", (ulong) kernel_entry);
+	debug("## Transferring control to Linux (at address %08lx)...\n",
+	      (ulong) kernel_entry);
 	bootstage_mark(BOOTSTAGE_ID_RUN_OS);
 	announce_and_cleanup(fake);
 

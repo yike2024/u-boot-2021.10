@@ -68,6 +68,11 @@ obj-$(CONFIG_CMD_FAT) += fat.o
 obj-$(CONFIG_CMD_FDT) += fdt.o
 obj-$(CONFIG_CMD_SQUASHFS) += sqfs.o
 obj-$(CONFIG_CMD_FLASH) += flash.o
+obj-$(CONFIG_CMD_CVI_JPEG) += cvi_jpeg.o
+obj-$(CONFIG_CMD_CVI_VO) += cvi_vo.o
+obj-$(CONFIG_CMD_CVI_UPDATE) += cvi_update.o
+obj-$(CONFIG_CMD_CVI_UPDATE) += cvi_utask.o
+obj-$(CONFIG_NAND_SUPPORT) += cvi_sd_update.o cvi_sd_update_spinand_v3.o
 obj-$(CONFIG_CMD_FPGA) += fpga.o
 obj-$(CONFIG_CMD_FPGAD) += fpgad.o
 obj-$(CONFIG_CMD_FS_GENERIC) += fs.o
@@ -105,6 +110,8 @@ obj-$(CONFIG_MP) += mp.o
 obj-$(CONFIG_CMD_MTD) += mtd.o
 obj-$(CONFIG_CMD_MTDPARTS) += mtdparts.o
 obj-$(CONFIG_CMD_CLONE) += clone.o
+obj-$(CONFIG_ROOTFS_UBUNTU) += mmcbcbx.o
+obj-$(CONFIG_CMD_BM_SAVELOG) += bm_savelog.o
 ifneq ($(CONFIG_CMD_NAND)$(CONFIG_CMD_SF),)
 obj-y += legacy-mtd-utils.o
 endif
@@ -199,6 +206,8 @@ obj-$(CONFIG_CMD_AVB) += avb.o
 
 # Foundries.IO SCP03
 obj-$(CONFIG_CMD_SCP03) += scp03.o
+
+obj-y += otp.o
 
 obj-$(CONFIG_ARM) += arm/
 obj-$(CONFIG_RISCV) += riscv/

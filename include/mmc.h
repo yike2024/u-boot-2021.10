@@ -200,11 +200,13 @@ static inline bool mmc_is_tuning_cmd(uint cmdidx)
 
 #define MMC_SWITCH_MODE_CMD_SET		0x00 /* Change the command set */
 #define MMC_SWITCH_MODE_SET_BITS	0x01 /* Set bits in EXT_CSD byte
-						addressed by index which are
-						1 in value field */
+					      *	addressed by index which are
+					      *	1 in value field
+					      */
 #define MMC_SWITCH_MODE_CLEAR_BITS	0x02 /* Clear bits in EXT_CSD byte
-						addressed by index, which are
-						1 in value field */
+					      * addressed by index, which are
+					      * 1 in value field
+					      */
 #define MMC_SWITCH_MODE_WRITE_BYTE	0x03 /* Set target byte to value */
 
 #define SD_SWITCH_CHECK		0
@@ -478,7 +480,7 @@ struct dm_mmc_ops {
 	 */
 	int (*get_wp)(struct udevice *dev);
 
-#ifdef MMC_SUPPORTS_TUNING
+#ifdef CONFIG_MMC_SUPPORTS_TUNING
 	/**
 	 * execute_tuning() - Start the tuning process
 	 *
@@ -488,17 +490,19 @@ struct dm_mmc_ops {
 	 */
 	int (*execute_tuning)(struct udevice *dev, uint opcode);
 #endif
-
-	/**
-	 * wait_dat0() - wait until dat0 is in the target state
-	 *		(CLK must be running during the wait)
-	 *
-	 * @dev:	Device to check
-	 * @state:	target state
-	 * @timeout_us:	timeout in us
-	 * @return 0 if dat0 is in the target state, -ve on error
-	 */
+		/**
+		 * wait_dat0() - wait until dat0 is in the target state
+		 *		(CLK must be running during the wait)
+		 *
+		 * @dev:	Device to check
+		 * @state:	target state
+		 * @timeout:	timeout in us
+		 * @return 0 if dat0 is in the target state, -ve on error
+		 */
 	int (*wait_dat0)(struct udevice *dev, int state, int timeout_us);
+#ifdef CONFIG_MMC_UHS_SUPPORT
+	void (*set_voltage)(struct udevice *dev);
+#endif
 
 #if CONFIG_IS_ENABLED(MMC_HS400_ES_SUPPORT)
 	/* set_enhanced_strobe() - set HS400 enhanced strobe */
@@ -637,7 +641,7 @@ static inline bool mmc_is_mode_ddr(enum bus_mode mode)
 
 static inline bool supports_uhs(uint caps)
 {
-#if CONFIG_IS_ENABLED(MMC_UHS_SUPPORT)
+#ifdef CONFIG_MMC_UHS_SUPPORT
 	return (caps & UHS_CAPS) ? true : false;
 #else
 	return false;
@@ -788,8 +792,8 @@ int mmc_send_tuning(struct mmc *mmc, u32 opcode, int *cmd_error);
 int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data);
 
 #if CONFIG_IS_ENABLED(MMC_UHS_SUPPORT) || \
-    CONFIG_IS_ENABLED(MMC_HS200_SUPPORT) || \
-    CONFIG_IS_ENABLED(MMC_HS400_SUPPORT)
+	CONFIG_IS_ENABLED(MMC_HS200_SUPPORT) || \
+	CONFIG_IS_ENABLED(MMC_HS400_SUPPORT)
 int mmc_deinit(struct mmc *mmc);
 #endif
 
@@ -845,6 +849,7 @@ void print_mmc_devices(char separator);
  * @return 0 if there is no MMC device, else the number of devices
  */
 int get_mmc_num(void);
+int mmc_switch(struct mmc *mmc, u8 set, u8 index, u8 value);
 int mmc_switch_part(struct mmc *mmc, unsigned int part_num);
 int mmc_hwpart_config(struct mmc *mmc, const struct mmc_hwpart_conf *conf,
 		      enum mmc_hwpart_conf_mode mode);

@@ -35,7 +35,7 @@ static struct disk_partition fs_partition;
 static int fs_type = FS_TYPE_ANY;
 
 static inline int fs_probe_unsupported(struct blk_desc *fs_dev_desc,
-				      struct disk_partition *fs_partition)
+				       struct disk_partition *fs_partition)
 {
 	log_debug("Unrecognized filesystem type\n");
 	return -1;
@@ -96,8 +96,8 @@ static inline int fs_read_unsupported(const char *filename, void *buf,
 }
 
 static inline int fs_write_unsupported(const char *filename, void *buf,
-				      loff_t offset, loff_t len,
-				      loff_t *actwrite)
+				       loff_t offset, loff_t len,
+				       loff_t *actwrite)
 {
 	return -1;
 }
@@ -530,6 +530,10 @@ static int _fs_read(const char *filename, ulong addr, loff_t offset, loff_t len,
 	void *buf;
 	int ret;
 
+#ifdef CONFIG_ROOTFS_UBUNTU
+	printf("fs reading: %s\n", filename);
+#endif
+
 #ifdef CONFIG_LMB
 	if (do_lmb_check) {
 		ret = fs_read_lmb_check(filename, addr, offset, len, info);
@@ -746,7 +750,7 @@ int do_load(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[],
 		pos = 0;
 
 	time = get_timer(0);
-	ret = _fs_read(filename, addr, pos, bytes, 1, &len_read);
+	ret = _fs_read(filename, addr, pos, bytes, 0, &len_read);
 	time = get_timer(time);
 	if (ret < 0) {
 		log_err("Failed to load '%s'\n", filename);
@@ -845,6 +849,7 @@ int do_fs_uuid(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[],
 {
 	int ret;
 	char uuid[37];
+
 	memset(uuid, 0, sizeof(uuid));
 
 	if (argc < 3 || argc > 4)

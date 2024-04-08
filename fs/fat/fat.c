@@ -148,7 +148,7 @@ static void get_name(dir_entry *dirent, char *s_name)
 
 static int flush_dirty_fat_buffer(fsdata *mydata);
 
-#if !CONFIG_IS_ENABLED(FAT_WRITE)
+#if !defined(CONFIG_FAT_WRITE)
 /* Stub for read only operation */
 int flush_dirty_fat_buffer(fsdata *mydata)
 {
@@ -251,11 +251,10 @@ get_cluster(fsdata *mydata, __u32 clustnum, __u8 *buffer, unsigned long size)
 	__u32 startsect;
 	int ret;
 
-	if (clustnum > 0) {
+	if (clustnum > 0)
 		startsect = clust_to_sect(mydata, clustnum);
-	} else {
+	else
 		startsect = mydata->rootdir_sect;
-	}
 
 	debug("gc - clustnum: %d, startsect: %d\n", clustnum, startsect);
 
@@ -828,6 +827,7 @@ void *fat_next_cluster(fat_itr *itr, unsigned int *nbytes)
 		 */
 		unsigned sect_offset = itr->next_clust * itr->fsdata->clust_size;
 		unsigned remaining_sects = itr->fsdata->rootdir_size - sect_offset;
+
 		sect = itr->fsdata->rootdir_sect + sect_offset;
 		/* do not read past the end of rootdir */
 		read_size = min_t(u32, itr->fsdata->clust_size,
@@ -1371,6 +1371,7 @@ int fat_readdir(struct fs_dir_stream *dirs, struct fs_dirent **dentp)
 void fat_closedir(struct fs_dir_stream *dirs)
 {
 	fat_dir *dir = (fat_dir *)dirs;
+
 	free(dir->fsdata.fatbuf);
 	free(dir);
 }

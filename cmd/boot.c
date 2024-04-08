@@ -18,7 +18,7 @@ __attribute__((weak))
 unsigned long do_go_exec(ulong (*entry)(int, char * const []), int argc,
 				 char *const argv[])
 {
-	return entry (argc, argv);
+	return entry(argc, argv);
 }
 
 static int do_go(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
@@ -31,16 +31,17 @@ static int do_go(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 
 	addr = hextoul(argv[1], NULL);
 
-	printf ("## Starting application at 0x%08lX ...\n", addr);
+	printf("## Starting application at 0x%08lX ...\n", addr);
 
 	/*
 	 * pass address parameter as argv[0] (aka command name),
 	 * and all remaining args
 	 */
-	rc = do_go_exec ((void *)addr, argc - 1, argv + 1);
-	if (rc != 0) rcode = 1;
+	rc = do_go_exec((void *)addr, argc - 1, argv + 1);
+	if (rc != 0)
+		rcode = 1;
 
-	printf ("## Application terminated, rc = 0x%lX\n", rc);
+	printf("## Application terminated, rc = 0x%lX\n", rc);
 	return rcode;
 }
 
@@ -69,3 +70,10 @@ U_BOOT_CMD(
 	""
 );
 #endif
+
+U_BOOT_CMD(
+	reset_c906b, 3, 2, do_reset_c906b,
+	"reset the AP C906B",
+	"Usage: bring up and reset_c906b\n"
+	"     - reset_c906b [CPU core] [rvba addr]\n"
+)

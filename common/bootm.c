@@ -22,6 +22,8 @@
 #include <asm/global_data.h>
 #include <asm/io.h>
 #include <linux/sizes.h>
+#include <linux/libfdt.h>
+#include <mmio.h>
 #if defined(CONFIG_CMD_USB)
 #include <usb.h>
 #endif
@@ -44,6 +46,11 @@
 
 #ifndef USE_HOSTCC
 
+extern uint cid_dts[4];
+#define INT_STR_SIZE	11
+
+#define CID_SIZE	4
+
 DECLARE_GLOBAL_DATA_PTR;
 
 bootm_headers_t images;		/* pointers to os/initrd/fdt images */
@@ -54,6 +61,22 @@ static const void *boot_get_kernel(struct cmd_tbl *cmdtp, int flag, int argc,
 
 __weak void board_quiesce_devices(void)
 {
+}
+
+static int set_cid_dts(struct fdt_header *blob)
+{
+	char cid_str[INT_STR_SIZE * CID_SIZE] = "\0";
+	char temp_str[INT_STR_SIZE];
+
+	for (int i = 0; i < 4; i++) {
+		sprintf(temp_str, "%x", cid_dts[i]);
+		strcat(cid_str, temp_str);
+	}
+		/* add properties to the node. */
+	if (fdt_setprop_string(blob, 0, "serial-number", cid_str))
+		return -EINVAL;
+
+	return 0;
 }
 
 #ifdef CONFIG_LMB
@@ -293,6 +316,10 @@ int bootm_find_images(int flag, int argc, char *const argv[], ulong start,
 
 	if (CONFIG_IS_ENABLED(CMD_FDT))
 		set_working_fdt_addr(map_to_sysmem(images.ft_addr));
+	ret = set_cid_dts(working_fdt);
+	if (ret)
+		printf("ERROR: set cid in DTS fail\n");
+
 #endif
 
 #if IMAGE_ENABLE_FIT

@@ -64,7 +64,6 @@ obj-$(CONFIG_OMAP_USB_PHY) += usb/phy/
 obj-$(CONFIG_SPL_SATA_SUPPORT) += ata/ scsi/
 obj-$(CONFIG_HAVE_BLOCK_DEVICE) += block/
 obj-$(CONFIG_SPL_THERMAL) += thermal/
-
 endif
 endif
 
