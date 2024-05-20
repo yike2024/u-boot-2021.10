@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2016 Socionext Inc.
  *   Author: Masahiro Yamada <yamada.masahiro@socionext.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -37,8 +36,8 @@ struct cvi_sdhci_host {
 	int no_1_8_v;
 	int is_64_addressing;
 	int reset_tx_rx_phy;
-	uint32_t mmc_fmax_freq;
-	uint32_t mmc_fmin_freq;
+	u32 mmc_fmax_freq;
+	u32 mmc_fmin_freq;
 	struct reset_ctl reset_ctl;
 };
 
@@ -111,7 +110,9 @@ static void cvi_mmc_set_tap(struct sdhci_host *host, u16 tap)
 {
 	pr_debug("%s %d\n", __func__, tap);
 	// Set sd_clk_en(0x2c[2]) to 0
-	sdhci_writew(host, sdhci_readw(host, SDHCI_CLOCK_CONTROL) & (~(BIT(2))), SDHCI_CLOCK_CONTROL);
+	sdhci_writew(host,
+		     sdhci_readw(host, SDHCI_CLOCK_CONTROL) & (~(BIT(2))),
+		     SDHCI_CLOCK_CONTROL);
 	sdhci_writel(host,
 		     sdhci_readl(host, CVI_SDHCI_VENDOR_MSHC_CTRL_R) & (~(BIT(1))),
 		     CVI_SDHCI_VENDOR_MSHC_CTRL_R);
@@ -123,16 +124,16 @@ static void cvi_mmc_set_tap(struct sdhci_host *host, u16 tap)
 
 static inline uint32_t CHECK_MASK_BIT(void *_mask, uint32_t bit)
 {
-	uint32_t w = bit / 8;
-	uint32_t off = bit % 8;
+	u32 w = bit / 8;
+	u32 off = bit % 8;
 
 	return ((uint8_t *)_mask)[w] & (1 << off);
 }
 
 static inline void SET_MASK_BIT(void *_mask, uint32_t bit)
 {
-	uint32_t byte = bit / 8;
-	uint32_t offset = bit % 8;
+	u32 byte = bit / 8;
+	u32 offset = bit % 8;
 	((uint8_t *)_mask)[byte] |= (1 << offset);
 }
 
@@ -145,12 +146,16 @@ static void reset_after_tuning_pass(struct sdhci_host *host)
 		     SDHCI_INT_STATUS);
 
 	/* Set SDHCI_SOFTWARE_RESET.SW_RST_DAT = 1 to clear buffered tuning block */
-	sdhci_writeb(host, sdhci_readb(host, SDHCI_SOFTWARE_RESET) | (0x1 << 2), SDHCI_SOFTWARE_RESET);
+	sdhci_writeb(host,
+		     sdhci_readb(host, SDHCI_SOFTWARE_RESET) | (0x1 << 2), SDHCI_SOFTWARE_RESET);
 
 	/* Set SDHCI_SOFTWARE_RESET.SW_RST_CMD = 1	*/
-	sdhci_writeb(host, sdhci_readb(host, SDHCI_SOFTWARE_RESET) | (0x1 << 1), SDHCI_SOFTWARE_RESET);
+	sdhci_writeb(host,
+		     sdhci_readb(host, SDHCI_SOFTWARE_RESET) | (0x1 << 1),
+		     SDHCI_SOFTWARE_RESET);
 
-	while (sdhci_readb(host, SDHCI_SOFTWARE_RESET) & 0x3);
+	while (sdhci_readb(host, SDHCI_SOFTWARE_RESET) & 0x3)
+		;
 }
 
 int cvi_general_execute_tuning(struct mmc *mmc, u8 opcode)
@@ -216,13 +221,11 @@ retry_tuning:
 			goto retry_tuning;
 		}
 
-		if (ret) {
+		if (ret)
 			SET_MASK_BIT(tuning_result, min);
-		}
 
-		if (reg_rx_lead_lag) {
+		if (reg_rx_lead_lag)
 			SET_MASK_BIT(rx_lead_lag_result, min);
-		}
 
 		min++;
 	}
@@ -254,9 +257,9 @@ retry_tuning:
 	// Find a final tap as median of maximum window.
 	for (k = 0; k < TUNE_MAX_PHCODE; k++) {
 		if (CHECK_MASK_BIT(tuning_result, k) == 0) {
-			if (-1 == cur_window_idx) {
+			if (-1 == cur_window_idx)
 				cur_window_idx = k;
-			}
+
 			cur_window_size++;
 
 			if (cur_window_size > max_window_size) {
@@ -281,9 +284,9 @@ retry_tuning:
 				max_lead_lag_size = cur_window_size;
 				break;
 			}
-			if (cur_window_idx == -1) {
+			if (cur_window_idx == -1)
 				cur_window_idx = k;
-			}
+
 			cur_window_size++;
 			rx_lead_lag_phase = 0;
 		} else {
@@ -298,9 +301,11 @@ retry_tuning:
 		}
 	}
 	rate = max_window_size * 100 / max_lead_lag_size;
-	pr_debug("mmc%d : MaxWindow[Idx, Width]:[%d,%u]\n", host->index, max_window_idx, max_window_size);
+	pr_debug("mmc%d : MaxWindow[Idx, Width]:[%d,%u]\n",
+		 host->index, max_window_idx, max_window_size);
 	pr_debug("mmc%d : Tuning Tap: %d\n", host->index, final_tap);
-	pr_debug("mmc%d : RX_LeadLag[Idx, Width]:[%d,%u]\n", host->index, max_lead_lag_idx, max_lead_lag_size);
+	pr_debug("mmc%d : RX_LeadLag[Idx, Width]:[%d,%u]\n",
+		 host->index, max_lead_lag_idx, max_lead_lag_size);
 	pr_debug("mmc%d : rate = %d\n", host->index, rate);
 
 	cvi_mmc_set_tap(host, final_tap);
@@ -371,32 +376,31 @@ static void cvi_general_reset(struct sdhci_host *host, u8 mask)
 		//reg_0x240[25:24] = 1 reg_0x240[22:16] = 0 reg_0x240[9:8] = 1 reg_0x240[6:0] = 0
 		sdhci_writel(host, 0x1000100, CVI_SDHCI_PHY_TX_RX_DLY);
 	}
-
 }
 
 #ifdef CONFIG_MMC_UHS_SUPPORT
 static void cvi_sd_voltage_switch(struct mmc *mmc)
 {
 	struct sdhci_host *host = mmc->priv;
+
 	if (host->index == MMC_TYPE_SD) {
 #if CONFIG_IS_ENABLED(DM_MMC) && CONFIG_IS_ENABLED(DM_GPIO)
-	if (dm_gpio_is_valid(&host->pwr_gpio))
-		dm_gpio_set_value(&host->pwr_gpio, 1);
+		if (dm_gpio_is_valid(&host->pwr_gpio))
+			dm_gpio_set_value(&host->pwr_gpio, 1);
 
 #endif
-	udelay(1000);
-	/* set ms to 1 */
-	mmio_clrsetbits_32(0x281051e0, 1 << 6, 1 << 6);
+		udelay(1000);
+		/* set ms to 1 */
+		mmio_clrsetbits_32(0x281051e0, 1 << 6, 1 << 6);
 	} else if (host->index == MMC_TYPE_SD1) {
-
 #if CONFIG_IS_ENABLED(DM_MMC) && CONFIG_IS_ENABLED(DM_GPIO)
-	if (dm_gpio_is_valid(&host->pwr_gpio))
-		dm_gpio_set_value(&host->pwr_gpio, 1);
+		if (dm_gpio_is_valid(&host->pwr_gpio))
+			dm_gpio_set_value(&host->pwr_gpio, 1);
 
 #endif
-	udelay(1000);
-	/* set ms to 1 */
-	mmio_clrsetbits_32(0x281051e0, 1 << 4, 1 << 4);
+		udelay(1000);
+		/* set ms to 1 */
+		mmio_clrsetbits_32(0x281051e0, 1 << 4, 1 << 4);
 	}
 }
 #endif
@@ -407,12 +411,10 @@ int cvi_get_cd(struct sdhci_host *host)
 
 	reg = sdhci_readl(host, SDHCI_PRESENT_STATE);
 	pr_debug("%s reg = 0x08%x\n", __func__, reg);
-	if (reg & SDHCI_CARD_PRESENT) {
+	if (reg & SDHCI_CARD_PRESENT)
 		return 1;
-	} else {
+	else
 		return 0;
-	}
-	return 1;
 }
 
 void sd0_pad_setup(void)
@@ -524,7 +526,8 @@ static int cvi_sdhci_probe(struct udevice *dev)
 	if (cvi_host->reset_tx_rx_phy) {
 		/* Default value */
 		sdhci_writel(host,
-			     sdhci_readl(host, CVI_SDHCI_VENDOR_MSHC_CTRL_R) | BIT(1) | BIT(8) | BIT(9),
+			     sdhci_readl(host, CVI_SDHCI_VENDOR_MSHC_CTRL_R)
+			     | BIT(1) | BIT(8) | BIT(9),
 			     CVI_SDHCI_VENDOR_MSHC_CTRL_R);
 		sdhci_writel(host, 0x01000100, CVI_SDHCI_PHY_TX_RX_DLY);
 		sdhci_writel(host, 00000001, SDHCI_PHY_CONFIG);

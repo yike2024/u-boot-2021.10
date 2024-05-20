@@ -34,12 +34,15 @@
 
 #include <fs.h>
 
-#define SOPH_LOGO_SIZE 1228854
-#define BMP_PROCESSED_FLAG 8399
+#define DTSNAME_MAX_LEN			32
+#define LOGO_ADDR_4G			(0x154000000)
+#define LOGO_ADDR_8G			(0x140000000)
 
 DECLARE_GLOBAL_DATA_PTR;
 static LIST_HEAD(soph_display_list);
 static LIST_HEAD(logo_cache_list);
+
+extern void get_dts_type_from_oem(unsigned char *dtsname);
 
 enum {
 	PORT_DIR_IN,
@@ -805,32 +808,42 @@ struct soph_logo_cache *find_or_alloc_logo_cache(const char *bmp)
 
 void soph_load_logo(void *addr)
 {
-	char *misc_part_offset, *misc_part_size, *cmd;
 	char cmd_all[30];
 	int ret;
+
+#if defined(CONFIG_ROOTFS_UBUNTU) || defined(CONFIG_ROOTFS_DEBIAN)
+	sprintf(cmd_all, "%s %s %s 0x%llx %s", "fatload", "mmc",
+			"0:1", (u64)addr, "soph_logo.bmp");
+	ret = run_command(cmd_all, 0);
+	if(ret){
+		printf("run soph load command error!\n");
+	}
+#else
+	char *misc_part_offset, *misc_part_size, *cmd;
 
 	misc_part_offset = env_get("MISC_PART_OFFSET");
 	misc_part_size = env_get("MISC_PART_SIZE");
 
-#ifdef CONFIG_NAND_SUPPORT
-	sprintf(cmd_all, "%s %s 0x%llx %s", "nand", "read",
-		   (u64)addr, "MISC");
-	run_command(cmd_all, 0);
-	return;
-#elif defined(CONFIG_SPI_FLASH)
-	cmd = "sf";
-	run_command("sf probe", 0);
-#else
-	cmd = "mmc";
-	run_command("mmc dev 0", 0);
-#endif
-	sprintf(cmd_all, "%s %s 0x%llx %s %s", cmd, "read",
-		   (u64)addr, misc_part_offset, misc_part_size);
+	#ifdef CONFIG_NAND_SUPPORT
+		sprintf(cmd_all, "%s %s 0x%llx %s", "nand", "read",
+			(u64)addr, "MISC");
+		run_command(cmd_all, 0);
+		return;
+	#elif defined(CONFIG_SPI_FLASH)
+		cmd = "sf";
+		run_command("sf probe", 0);
+	#else
+		cmd = "mmc";
+		run_command("mmc dev 0", 0);
+	#endif
+		sprintf(cmd_all, "%s %s 0x%llx %s %s", cmd, "read",
+			(u64)addr, misc_part_offset, misc_part_size);
 
 	ret = run_command(cmd_all, 0);
 	if(ret){
 		printf("run soph load command error!\n");
 	}
+#endif
 }
 
 static int load_bmp_logo(struct display_state *s)
@@ -838,8 +851,11 @@ static int load_bmp_logo(struct display_state *s)
 	struct soph_logo_cache *logo_cache;
 	struct bmp_header *header = NULL;
 	void *dst, *pdst;
+	char dtsType[DTSNAME_MAX_LEN] = {0};
+	const char *to_find = "4G";
 	int ret = 0;
 	int dst_size;
+	char *ptr;
 
 	struct logo_info *logo = &s->logo;
 	char *bmp_name = s->ulogo_name;
@@ -875,7 +891,15 @@ static int load_bmp_logo(struct display_state *s)
 	* only support 24bpp;
 	*/
 	if (logo->bpp == 24) {
-		dst = (void*)CVIMMAP_BOOTLOGO_ADDR;
+		get_dts_type_from_oem(dtsType);
+		ptr = strstr(dtsType, to_find);
+		if (ptr != NULL) {
+			dst = (void*)LOGO_ADDR_4G;
+			printf("use 4G dts config for vo logo\n");
+		} else {
+			dst = (void*)LOGO_ADDR_8G;
+			printf("use 8G dts config for vo logo\n");
+		}
 	} else {
 		printf("failed to display logo with bpp:%d\n", logo->bpp);
 		ret = -EINVAL;

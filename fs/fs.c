@@ -530,7 +530,7 @@ static int _fs_read(const char *filename, ulong addr, loff_t offset, loff_t len,
 	void *buf;
 	int ret;
 
-#ifdef CONFIG_ROOTFS_UBUNTU
+#if defined(CONFIG_ROOTFS_UBUNTU) || defined(CONFIG_ROOTFS_DEBIAN)
 	printf("fs reading: %s\n", filename);
 #endif
 

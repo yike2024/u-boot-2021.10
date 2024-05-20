@@ -854,186 +854,187 @@ MODULE_AUTHOR("Felipe Balbi <balbi@ti.com>");
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("DesignWare USB3 DRD Controller Driver");
 
-// #if CONFIG_IS_ENABLED(PHY) && CONFIG_IS_ENABLED(DM_USB)
-// int dwc3_setup_phy(struct udevice *dev, struct phy_bulk *phys)
-// {
-// 	int ret;
+#if CONFIG_IS_ENABLED(PHY) && CONFIG_IS_ENABLED(DM_USB)
+int dwc3_setup_phy(struct udevice *dev, struct phy_bulk *phys)
+{
+	int ret;
 
-// 	ret = generic_phy_get_bulk(dev, phys);
-// 	if (ret)
-// 		return ret;
+	ret = generic_phy_get_bulk(dev, phys);
+	if (ret)
+		return ret;
 
-// 	ret = generic_phy_init_bulk(phys);
-// 	if (ret)
-// 		return ret;
+	ret = generic_phy_init_bulk(phys);
+	if (ret)
+		return ret;
 
-// 	ret = generic_phy_power_on_bulk(phys);
-// 	if (ret)
-// 		generic_phy_exit_bulk(phys);
+	ret = generic_phy_power_on_bulk(phys);
+	if (ret)
+		generic_phy_exit_bulk(phys);
 
-// 	return ret;
-// }
+	return ret;
+}
 
-// int dwc3_shutdown_phy(struct udevice *dev, struct phy_bulk *phys)
-// {
-// 	int ret;
+int dwc3_shutdown_phy(struct udevice *dev, struct phy_bulk *phys)
+{
+	int ret;
 
-// 	ret = generic_phy_power_off_bulk(phys);
-// 	ret |= generic_phy_exit_bulk(phys);
-// 	return ret;
-// }
-// #endif
+	ret = generic_phy_power_off_bulk(phys);
+	ret |= generic_phy_exit_bulk(phys);
+	return ret;
+}
+#endif
 
-// #if CONFIG_IS_ENABLED(DM_USB)
-// void dwc3_of_parse(struct dwc3 *dwc)
-// {
-// 	const u8 *tmp;
-// 	struct udevice *dev = dwc->dev;
-// 	u8 lpm_nyet_threshold;
-// 	u8 tx_de_emphasis;
-// 	u8 hird_threshold;
+#if CONFIG_IS_ENABLED(DM_USB)
+void dwc3_of_parse(struct dwc3 *dwc)
+{
+	const u8 *tmp;
+	struct udevice *dev = dwc->dev;
+	u8 lpm_nyet_threshold;
+	u8 tx_de_emphasis;
+	u8 hird_threshold;
 
-// 	/* default to highest possible threshold */
-// 	lpm_nyet_threshold = 0xff;
+	/* default to highest possible threshold */
+	lpm_nyet_threshold = 0xff;
 
-// 	/* default to -3.5dB de-emphasis */
-// 	tx_de_emphasis = 1;
+	/* default to -3.5dB de-emphasis */
+	tx_de_emphasis = 1;
 
-// 	/*
-// 	 * default to assert utmi_sleep_n and use maximum allowed HIRD
-// 	 * threshold value of 0b1100
-// 	 */
-// 	hird_threshold = 12;
+	/*
+	 * default to assert utmi_sleep_n and use maximum allowed HIRD
+	 * threshold value of 0b1100
+	 */
+	hird_threshold = 12;
 
-// 	dwc->hsphy_mode = usb_get_phy_mode(dev_ofnode(dev));
+	dwc->hsphy_mode = usb_get_phy_mode(dev_ofnode(dev));
 
-// 	dwc->has_lpm_erratum = dev_read_bool(dev,
-// 				"snps,has-lpm-erratum");
-// 	tmp = dev_read_u8_array_ptr(dev, "snps,lpm-nyet-threshold", 1);
-// 	if (tmp)
-// 		lpm_nyet_threshold = *tmp;
+	dwc->has_lpm_erratum = dev_read_bool(dev,
+					     "snps,has-lpm-erratum");
+	tmp = dev_read_u8_array_ptr(dev, "snps,lpm-nyet-threshold", 1);
+	if (tmp)
+		lpm_nyet_threshold = *tmp;
 
-// 	dwc->is_utmi_l1_suspend = dev_read_bool(dev,
-// 				"snps,is-utmi-l1-suspend");
-// 	tmp = dev_read_u8_array_ptr(dev, "snps,hird-threshold", 1);
-// 	if (tmp)
-// 		hird_threshold = *tmp;
+	dwc->is_utmi_l1_suspend = dev_read_bool(dev,
+						"snps,is-utmi-l1-suspend");
+	tmp = dev_read_u8_array_ptr(dev, "snps,hird-threshold", 1);
+	if (tmp)
+		hird_threshold = *tmp;
 
-// 	dwc->disable_scramble_quirk = dev_read_bool(dev,
-// 				"snps,disable_scramble_quirk");
-// 	dwc->u2exit_lfps_quirk = dev_read_bool(dev,
-// 				"snps,u2exit_lfps_quirk");
-// 	dwc->u2ss_inp3_quirk = dev_read_bool(dev,
-// 				"snps,u2ss_inp3_quirk");
-// 	dwc->req_p1p2p3_quirk = dev_read_bool(dev,
-// 				"snps,req_p1p2p3_quirk");
-// 	dwc->del_p1p2p3_quirk = dev_read_bool(dev,
-// 				"snps,del_p1p2p3_quirk");
-// 	dwc->del_phy_power_chg_quirk = dev_read_bool(dev,
-// 				"snps,del_phy_power_chg_quirk");
-// 	dwc->lfps_filter_quirk = dev_read_bool(dev,
-// 				"snps,lfps_filter_quirk");
-// 	dwc->rx_detect_poll_quirk = dev_read_bool(dev,
-// 				"snps,rx_detect_poll_quirk");
-// 	dwc->dis_u3_susphy_quirk = dev_read_bool(dev,
-// 				"snps,dis_u3_susphy_quirk");
-// 	dwc->dis_u2_susphy_quirk = dev_read_bool(dev,
-// 				"snps,dis_u2_susphy_quirk");
-// 	dwc->dis_del_phy_power_chg_quirk = dev_read_bool(dev,
-// 				"snps,dis-del-phy-power-chg-quirk");
-// 	dwc->dis_tx_ipgap_linecheck_quirk = dev_read_bool(dev,
-// 				"snps,dis-tx-ipgap-linecheck-quirk");
-// 	dwc->dis_enblslpm_quirk = dev_read_bool(dev,
-// 				"snps,dis_enblslpm_quirk");
-// 	dwc->dis_u2_freeclk_exists_quirk = dev_read_bool(dev,
-// 				"snps,dis-u2-freeclk-exists-quirk");
-// 	dwc->tx_de_emphasis_quirk = dev_read_bool(dev,
-// 				"snps,tx_de_emphasis_quirk");
-// 	tmp = dev_read_u8_array_ptr(dev, "snps,tx_de_emphasis", 1);
-// 	if (tmp)
-// 		tx_de_emphasis = *tmp;
+	dwc->disable_scramble_quirk = dev_read_bool(dev,
+						    "snps,disable_scramble_quirk");
+	dwc->u2exit_lfps_quirk = dev_read_bool(dev,
+					       "snps,u2exit_lfps_quirk");
+	dwc->u2ss_inp3_quirk = dev_read_bool(dev,
+					     "snps,u2ss_inp3_quirk");
+	dwc->req_p1p2p3_quirk = dev_read_bool(dev,
+					      "snps,req_p1p2p3_quirk");
+	dwc->del_p1p2p3_quirk = dev_read_bool(dev,
+					      "snps,del_p1p2p3_quirk");
+	dwc->del_phy_power_chg_quirk = dev_read_bool(dev,
+						     "snps,del_phy_power_chg_quirk");
+	dwc->lfps_filter_quirk = dev_read_bool(dev,
+					       "snps,lfps_filter_quirk");
+	dwc->rx_detect_poll_quirk = dev_read_bool(dev,
+						  "snps,rx_detect_poll_quirk");
+	dwc->dis_u3_susphy_quirk = dev_read_bool(dev,
+						 "snps,dis_u3_susphy_quirk");
+	dwc->dis_u2_susphy_quirk = dev_read_bool(dev,
+						 "snps,dis_u2_susphy_quirk");
+	dwc->dis_del_phy_power_chg_quirk = dev_read_bool(dev,
+							 "snps,dis-del-phy-power-chg-quirk");
+	dwc->dis_tx_ipgap_linecheck_quirk = dev_read_bool(dev,
+							  "snps,dis-tx-ipgap-linecheck-quirk");
+	dwc->dis_enblslpm_quirk = dev_read_bool(dev,
+						"snps,dis_enblslpm_quirk");
+	dwc->dis_u2_freeclk_exists_quirk = dev_read_bool(dev,
+							 "snps,dis-u2-freeclk-exists-quirk");
+	dwc->tx_de_emphasis_quirk = dev_read_bool(dev,
+						  "snps,tx_de_emphasis_quirk");
+	tmp = dev_read_u8_array_ptr(dev, "snps,tx_de_emphasis", 1);
+	if (tmp)
+		tx_de_emphasis = *tmp;
 
-// 	dwc->lpm_nyet_threshold = lpm_nyet_threshold;
-// 	dwc->tx_de_emphasis = tx_de_emphasis;
+	dwc->lpm_nyet_threshold = lpm_nyet_threshold;
+	dwc->tx_de_emphasis = tx_de_emphasis;
 
-// 	dwc->hird_threshold = hird_threshold
-// 		| (dwc->is_utmi_l1_suspend << 4);
-// }
+	dwc->hird_threshold = hird_threshold
+		| (dwc->is_utmi_l1_suspend << 4);
+}
 
-// int dwc3_init(struct dwc3 *dwc)
-// {
-// 	int ret;
-// 	u32 reg;
+int dwc3_init(struct dwc3 *dwc)
+{
+	int ret;
+	u32 reg;
 
-// 	dwc3_cache_hwparams(dwc);
+	dwc3_cache_hwparams(dwc);
 
-// 	ret = dwc3_alloc_event_buffers(dwc, DWC3_EVENT_BUFFERS_SIZE);
-// 	if (ret) {
-// 		dev_err(dwc->dev, "failed to allocate event buffers\n");
-// 		return -ENOMEM;
-// 	}
+	ret = dwc3_alloc_event_buffers(dwc, DWC3_EVENT_BUFFERS_SIZE);
+	if (ret) {
+		dev_err(dwc->dev, "failed to allocate event buffers\n");
+		return -ENOMEM;
+	}
 
-// 	ret = dwc3_core_init(dwc);
-// 	if (ret) {
-// 		dev_err(dwc->dev, "failed to initialize core\n");
-// 		goto core_fail;
-// 	}
+	ret = dwc3_core_init(dwc);
+	if (ret) {
+		dev_err(dwc->dev, "failed to initialize core\n");
+		goto core_fail;
+	}
 
-// 	ret = dwc3_event_buffers_setup(dwc);
-// 	if (ret) {
-// 		dev_err(dwc->dev, "failed to setup event buffers\n");
-// 		goto event_fail;
-// 	}
+	ret = dwc3_event_buffers_setup(dwc);
+	if (ret) {
+		dev_err(dwc->dev, "failed to setup event buffers\n");
+		goto event_fail;
+	}
 
-// 	if (dwc->revision >= DWC3_REVISION_250A) {
-// 		reg = dwc3_readl(dwc->regs, DWC3_GUCTL1);
+	if (dwc->revision >= DWC3_REVISION_250A) {
+		reg = dwc3_readl(dwc->regs, DWC3_GUCTL1);
 
-// 		/*
-// 		 * Enable hardware control of sending remote wakeup
-// 		 * in HS when the device is in the L1 state.
-// 		 */
-// 		if (dwc->revision >= DWC3_REVISION_290A)
-// 			reg |= DWC3_GUCTL1_DEV_L1_EXIT_BY_HW;
+		/*
+		 * Enable hardware control of sending remote wakeup
+		 * in HS when the device is in the L1 state.
+		 */
+		if (dwc->revision >= DWC3_REVISION_290A)
+			reg |= DWC3_GUCTL1_DEV_L1_EXIT_BY_HW;
 
-// 		if (dwc->dis_tx_ipgap_linecheck_quirk)
-// 			reg |= DWC3_GUCTL1_TX_IPGAP_LINECHECK_DIS;
+		if (dwc->dis_tx_ipgap_linecheck_quirk)
+			reg |= DWC3_GUCTL1_TX_IPGAP_LINECHECK_DIS;
 
-// 		dwc3_writel(dwc->regs, DWC3_GUCTL1, reg);
-// 	}
+		dwc3_writel(dwc->regs, DWC3_GUCTL1, reg);
+	}
 
-// 	if (dwc->dr_mode == USB_DR_MODE_HOST ||
-// 	    dwc->dr_mode == USB_DR_MODE_OTG) {
-// 		reg = dwc3_readl(dwc->regs, DWC3_GUCTL);
+	if (dwc->dr_mode == USB_DR_MODE_HOST ||
+	    dwc->dr_mode == USB_DR_MODE_OTG) {
+		reg = dwc3_readl(dwc->regs, DWC3_GUCTL);
 
-// 		reg |= DWC3_GUCTL_HSTINAUTORETRY;
+		reg |= DWC3_GUCTL_HSTINAUTORETRY;
 
-// 		dwc3_writel(dwc->regs, DWC3_GUCTL, reg);
-// 	}
+		dwc3_writel(dwc->regs, DWC3_GUCTL, reg);
+	}
 
-// 	ret = dwc3_core_init_mode(dwc);
-// 	if (ret)
-// 		goto mode_fail;
+	ret = dwc3_core_init_mode(dwc);
+	if (ret)
+		goto mode_fail;
 
-// 	return 0;
+	return 0;
 
-// mode_fail:
-// 	dwc3_event_buffers_cleanup(dwc);
+mode_fail:
+	dwc3_event_buffers_cleanup(dwc);
 
-// event_fail:
-// 	dwc3_core_exit(dwc);
+event_fail:
+	dwc3_core_exit(dwc);
 
-// core_fail:
-// 	dwc3_free_event_buffers(dwc);
+core_fail:
+	dwc3_free_event_buffers(dwc);
 
-// 	return ret;
-// }
+	return ret;
+}
 
-// void dwc3_remove(struct dwc3 *dwc)
-// {
-// 	dwc3_core_exit_mode(dwc);
-// 	dwc3_event_buffers_cleanup(dwc);
-// 	dwc3_free_event_buffers(dwc);
-// 	dwc3_core_exit(dwc);
-// 	kfree(dwc->mem);
-// }
-// #endif
+void dwc3_remove(struct dwc3 *dwc)
+{
+	dwc3_core_exit_mode(dwc);
+	dwc3_event_buffers_cleanup(dwc);
+	dwc3_free_event_buffers(dwc);
+	dwc3_core_exit(dwc);
+	kfree(dwc->mem);
+}
+#endif
+

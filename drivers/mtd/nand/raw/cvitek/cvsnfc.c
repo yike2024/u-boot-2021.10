@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0+
+
 #include <common.h>
 #include <nand.h>
 #include <asm/io.h>
@@ -37,7 +39,7 @@
 #endif
 
 #ifdef DEBUG_WRITE_TWICE
-uint8_t dbg_pg_buf[MAX_PAGE_SIZE + MAX_SPARE_SIZE];
+u8 dbg_pg_buf[MAX_PAGE_SIZE + MAX_SPARE_SIZE];
 #endif
 
 static int cvsnfc_dev_ready(struct mtd_info *mtd);
@@ -72,12 +74,14 @@ void cvsnfc_register_dump(void)
 void spi_feature_op(struct cvsnfc_host *host, int op, int fe, unsigned int *val)
 {
 	if (op == GET_OP) {
-		cvsfc_write(host, REG_SPI_NAND_TRX_CTRL2, 1 << TRX_DATA_SIZE_SHIFT | 1 << TRX_CMD_CONT_SIZE_SHIFT);
+		cvsfc_write(host, REG_SPI_NAND_TRX_CTRL2, 1 << TRX_DATA_SIZE_SHIFT |
+			1 << TRX_CMD_CONT_SIZE_SHIFT);
 		cvsfc_write(host, REG_SPI_NAND_TRX_CTRL3, 0);
 		cvsfc_write(host, REG_SPI_NAND_TRX_CMD0, fe << 8 | SPI_NAND_CMD_GET_FEATURE);
 
 		cvsnfc_setup_intr(host);
-		cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) | BIT_REG_TRX_START);
+		cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) |
+		BIT_REG_TRX_START);
 
 		CVSNFC_CMD_WAIT_CPU_FINISH(host);
 		CVSNFC_CLEAR_INT(host);
@@ -86,17 +90,19 @@ void spi_feature_op(struct cvsnfc_host *host, int op, int fe, unsigned int *val)
 		if (DEBUG_CMD_FLOW)
 			pr_info("cvsnfc: get feature [%#x]<==[%#x]\n", fe, *val);
 	} else {
-		uint32_t fe_set = fe | (*val << 8);
+		u32 fe_set = fe | (*val << 8);
 
 		if (DEBUG_CMD_FLOW)
 			pr_info("cvsnfc: set feature [%#x] = [%#x]\n", fe, *val);
 
 		cvsfc_write(host, REG_SPI_NAND_TRX_CTRL2, 2 << TRX_CMD_CONT_SIZE_SHIFT);
 		cvsfc_write(host,  REG_SPI_NAND_TRX_CTRL3, BIT_REG_TRX_RW);
-		cvsfc_write(host,  REG_SPI_NAND_TRX_CMD0, (fe_set << TRX_CMD_CONT0_SHIFT) | SPI_NAND_CMD_SET_FEATURE);
+		cvsfc_write(host,  REG_SPI_NAND_TRX_CMD0, (fe_set << TRX_CMD_CONT0_SHIFT) |
+		SPI_NAND_CMD_SET_FEATURE);
 
 		cvsnfc_setup_intr(host);
-		cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) | BIT_REG_TRX_START);
+		cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) |
+		BIT_REG_TRX_START);
 
 		CVSNFC_CMD_WAIT_CPU_FINISH(host);
 		CVSNFC_CLEAR_INT(host);
@@ -176,7 +182,7 @@ static void cvsnfc_send_cmd_pageprog(struct cvsnfc_host *host)
 	cvsfc_write(host, CVSNFC_DMA_SADDR_OOB, val);
 	if (DEBUG_WRITE)
 		pr_info("  Set REG DMA_SADDR_OOB[%#x]%#x\n",
-			 CVSNFC_DMA_SADDR_OOB, val);
+			CVSNFC_DMA_SADDR_OOB, val);
 #ifdef CONFIG_ARCH_MMU
 	dcache_clean_range((unsigned int)host->dma_buffer,
 			   (unsigned int)(host->dma_buffer +
@@ -230,11 +236,11 @@ static void cvsnfc_send_cmd_readstart(struct cvsnfc_host *host)
 	if (DEBUG_READ)
 		pr_info("* Enter %s page read start!\n", op_type);
 
-	if ((host->addr_value[0] == host->cache_addr_value[0]) &&
-	    (host->addr_value[1] == host->cache_addr_value[1])) {
+	if (host->addr_value[0] == host->cache_addr_value[0] &&
+	    host->addr_value[1] == host->cache_addr_value[1]) {
 		if (DEBUG_READ)
 			pr_info("* %s page read cache hit! addr1[%#x], addr0[%#x]\n",
-				 op_type, host->addr_value[1], host->addr_value[0]);
+				op_type, host->addr_value[1], host->addr_value[0]);
 		return;
 	}
 
@@ -256,10 +262,10 @@ static void cvsnfc_send_cmd_readstart(struct cvsnfc_host *host)
 		only_oob = 1;
 		host->cmd_option.op_config =
 				CVSNFC_OP_CFG_RD_OP_SEL(RD_OP_READ_OOB);
-	} else
+	} else {
 		host->cmd_option.op_config =
 				CVSNFC_OP_CFG_RD_OP_SEL(RD_OP_READ_PAGE);
-
+	}
 	val = host->cmd_option.op_config
 		| CVSNFC_OP_CFG_MEM_IF_TYPE(spi->read->iftype)
 		| CVSNFC_OP_CFG_DUMMY_ADDR_NUM(spi->read->dummy);
@@ -316,7 +322,7 @@ static void cvsnfc_send_cmd_readstart(struct cvsnfc_host *host)
 	cvsfc_write(host, CVSNFC_DMA_SADDR_OOB, val);
 	if (DEBUG_READ)
 		pr_info("  Set REG DMA_SADDR_OOB[%#x]%#x\n",
-			 CVSNFC_DMA_SADDR_OOB, val);
+			CVSNFC_DMA_SADDR_OOB, val);
 
 #ifdef CONFIG_ARCH_MMU
 	dcache_inv_range((unsigned int)host->dma_buffer,
@@ -353,8 +359,8 @@ void cvsnfc_send_cmd_erase(struct cvsnfc_host *host)
 {
 	unsigned int val;
 	struct cvsnfc_op *spi = host->spi;
-	uint32_t row_addr = host->addr_value[1];
-	uint32_t r_row_addr = ((row_addr & 0xff0000) >> 16) | (row_addr & 0xff00)
+	u32 row_addr = host->addr_value[1];
+	u32 r_row_addr = ((row_addr & 0xff0000) >> 16) | (row_addr & 0xff00)
 			    | ((row_addr & 0xff) << 16);
 
 	if (DEBUG_ERASE) {
@@ -388,13 +394,15 @@ void cvsnfc_send_cmd_erase(struct cvsnfc_host *host)
 		pr_info("%s row_addr 0x%x\n", __func__, host->addr_value[1]);
 		pr_info("r_row_addr 0x%x\n", r_row_addr);
 	}
-
-	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL2, 3 << TRX_CMD_CONT_SIZE_SHIFT); // 3 bytes for 24-bit row address
+	// 3 bytes for 24-bit row address
+	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL2, 3 << TRX_CMD_CONT_SIZE_SHIFT);
 	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL3, 0x0);
-	cvsfc_write(host, REG_SPI_NAND_TRX_CMD0, (r_row_addr << TRX_CMD_CONT0_SHIFT) | SPI_NAND_CMD_BLOCK_ERASE);
+	cvsfc_write(host, REG_SPI_NAND_TRX_CMD0, (r_row_addr << TRX_CMD_CONT0_SHIFT) |
+	SPI_NAND_CMD_BLOCK_ERASE);
 
 	cvsnfc_setup_intr(host);
-	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) | BIT_REG_TRX_START);
+	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) |
+	BIT_REG_TRX_START);
 
 	CVSNFC_CMD_WAIT_CPU_FINISH(host);
 	CVSNFC_CLEAR_INT(host);
@@ -402,7 +410,6 @@ void cvsnfc_send_cmd_erase(struct cvsnfc_host *host)
 	val = spi->driver->wait_ready(spi);
 	if (val & STATUS_E_FAIL_MASK)
 		printf("cvsnfc: erase failed! status[%#x]\n", val);
-
 }
 
 /*****************************************************************************/
@@ -410,8 +417,8 @@ static void cvsnfc_send_cmd_status(struct cvsnfc_host *host)
 {
 	unsigned int regval, addr = 0;
 
-	if ((host->cmd_option.last_cmd == NAND_CMD_ERASE1) ||
-	    (host->cmd_option.last_cmd == NAND_CMD_PAGEPROG))
+	if (host->cmd_option.last_cmd == NAND_CMD_ERASE1 ||
+	    host->cmd_option.last_cmd == NAND_CMD_PAGEPROG)
 		addr = PROTECTION_ADDR;
 	else
 		addr = STATUS_ADDR;
@@ -420,7 +427,7 @@ static void cvsnfc_send_cmd_status(struct cvsnfc_host *host)
 
 	if (DEBUG_ERASE || DEBUG_WRITE)
 		pr_info("cvsnfc: %s get %#x status[%#x]\n",
-			 ((host->cmd_option.last_cmd == NAND_CMD_ERASE1)  ? "erase" : "write"),
+			((host->cmd_option.last_cmd == NAND_CMD_ERASE1)  ? "erase" : "write"),
 			addr, regval);
 }
 
@@ -438,14 +445,17 @@ static void cvsnfc_send_cmd_readid(struct cvsnfc_host *host)
 	u32 ori_trx_ctl = cvsfc_read(host, REG_SPI_NAND_TRX_CTRL1);
 
 	cvsfc_write(host, REG_SPI_NAND_BOOT_CTRL, BIT_REG_RSP_DLY_OW_VAL);
-	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL1, (BIT_REG_TRX_SCK_L | BIT_REG_TRX_SCK_H | BIT_REG_TRX_TIME_WAIT(9)));
-	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL2, (BIT_REG_TRX_DATA_SIZE(3) | BIT_REG_TRX_CMD_CONT_SIZE));
+	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL1, (BIT_REG_TRX_SCK_L | BIT_REG_TRX_SCK_H |
+	BIT_REG_TRX_TIME_WAIT(9)));
+	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL2, (BIT_REG_TRX_DATA_SIZE(3) |
+	BIT_REG_TRX_CMD_CONT_SIZE));
 	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL3, 0);
 	cvsfc_write(host, REG_SPI_NAND_TRX_CMD0, SPI_NAND_CMD_READ_ID);
 	//cvsfc_write(host, REG_SPI_NAND_BOOT_CTRL, BIT_REG_BOOT_PRD);
 
 	cvsnfc_setup_intr(host);
-	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) | BIT_REG_TRX_START);
+	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) |
+	BIT_REG_TRX_START);
 
 	CVSNFC_CMD_WAIT_CPU_FINISH(host);
 	CVSNFC_CLEAR_INT(host);
@@ -461,7 +471,8 @@ static void cvsnfc_send_cmd_reset(struct cvsnfc_host *host)
 	cvsfc_write(host, REG_SPI_NAND_TRX_CMD0, SPI_NAND_CMD_RESET);
 
 	cvsnfc_setup_intr(host);
-	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) | BIT_REG_TRX_START);
+	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) |
+	BIT_REG_TRX_START);
 
 	CVSNFC_CMD_WAIT_CPU_FINISH(host);
 	CVSNFC_CLEAR_INT(host);
@@ -478,7 +489,7 @@ static uint8_t cvsnfc_read_byte(struct mtd_info *mtd)
 
 	if ((host->offset % 4) == 0) {
 		data = cvsfc_read(host, REG_SPI_NAND_RX_DATA);
-		pr_info("cvsnfc_read_byte read data 0x%x, offset %d\n", data, host->offset);
+		pr_info("%s read data 0x%x, offset %d\n", __func__, data, host->offset);
 	}
 
 	if (host->cmd_option.last_cmd == NAND_CMD_READID) {
@@ -497,28 +508,24 @@ static uint8_t cvsnfc_read_byte(struct mtd_info *mtd)
 		return value;
 	}
 
-	if ((host->cmd_option.last_cmd == NAND_CMD_ERASE1) ||
-	    (host->cmd_option.last_cmd == NAND_CMD_PAGEPROG)) {
+	if (host->cmd_option.last_cmd == NAND_CMD_ERASE1 ||
+	    host->cmd_option.last_cmd == NAND_CMD_PAGEPROG)
 		return value;
-	}
 
-	if (host->cmd_option.last_cmd == NAND_CMD_ERASE2) {
+	if (host->cmd_option.last_cmd == NAND_CMD_ERASE2)
 		return value;
-	}
 
-	if (host->cmd_option.command == NAND_CMD_STATUS) {
+	if (host->cmd_option.command == NAND_CMD_STATUS)
 		return value;
-	}
 
-	if (host->cmd_option.last_cmd == NAND_CMD_READOOB) {
+	if (host->cmd_option.last_cmd == NAND_CMD_READOOB)
 		return value;
-	}
 
 	host->offset++;
 
 	pr_info("%s return\n", __func__);
 
-	return 0;// FIXME : readb(host->buffer + host->column + host->offset - 1);
+	return 0;
 }
 
 /*****************************************************************************/
@@ -533,7 +540,7 @@ static u16 cvsnfc_read_word(struct mtd_info *mtd)
 
 /*****************************************************************************/
 static void cvsnfc_write_buf(struct mtd_info *mtd,
-			     const uint8_t *buf, int len)
+			     const u8 *buf, int len)
 {
 }
 
@@ -688,7 +695,7 @@ static void cvsnfc_cmd_ctrl(struct mtd_info *mtd, int dat, unsigned int ctrl)
 		}
 	}
 
-	if ((dat == NAND_CMD_NONE) && host->addr_cycle) {
+	if (dat == NAND_CMD_NONE && host->addr_cycle) {
 		if (host->cmd_option.command == NAND_CMD_SEQIN ||
 		    host->cmd_option.command == NAND_CMD_READ0 ||
 		    host->cmd_option.command == NAND_CMD_READID) {
@@ -789,13 +796,13 @@ struct nand_config_info *cvsnfc_get_best_ecc(struct mtd_info *mtd)
 		if (mtd->oobsize < info->oobsize)
 			continue;
 
-		if (!best || (best->ecctype < info->ecctype))
+		if (!best || best->ecctype < info->ecctype)
 			best = info;
 	}
 
 	if (!best)
 		pr_info("Driver does not support the pagesize (%d) and oobsize(%d).\n",
-			 mtd->writesize, mtd->oobsize);
+			mtd->writesize, mtd->oobsize);
 
 	return best;
 }
@@ -832,7 +839,7 @@ struct nand_config_info *cvsnfc_force_ecc(struct mtd_info *mtd, int pagetype,
 	if (DEBUG_ECC)
 		printf("pagesize %d, mtd->writesize %d\n", pagesize, mtd->writesize);
 
-	if ((pagesize != mtd->writesize) &&
+	if (pagesize != mtd->writesize &&
 	    (pagesize > mtd->writesize || !allow_pagediv)) {
 		cvsnfc_register_dump();
 		return NULL;
@@ -855,7 +862,6 @@ int cvsnfc_ecc_probe(struct mtd_info *mtd, struct nand_chip *chip,
 	struct nand_config_info *best = NULL;
 	struct cvsnfc_host *host = chip->priv;
 	unsigned int pagetype, ecctype;
-
 
 #ifdef CONFIG_CVSNFC_HARDWARE_PAGESIZE_ECC
 
@@ -917,7 +923,8 @@ int cvsnfc_ecc_probe(struct mtd_info *mtd, struct nand_chip *chip,
 static int spi_nand_read_page(struct cvsnfc_host *host, int page)
 {
 	int row_addr = page;
-	int r_row_addr = ((row_addr & 0xff0000) >> 16) | (row_addr & 0xff00) | ((row_addr & 0xff) << 16);
+	int r_row_addr = ((row_addr & 0xff0000) >> 16) | (row_addr & 0xff00) |
+	((row_addr & 0xff) << 16);
 
 	if (DEBUG_READ)
 		pr_info("%s row_addr 0x%x\n", __func__, row_addr);
@@ -925,12 +932,15 @@ static int spi_nand_read_page(struct cvsnfc_host *host, int page)
 	if (DEBUG_READ)
 		pr_info("%s r_row_addr 0x%x\n", __func__, r_row_addr);
 
-	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL2, 0 << TRX_DATA_SIZE_SHIFT | 3 << TRX_CMD_CONT_SIZE_SHIFT);
+	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL2, 0 << TRX_DATA_SIZE_SHIFT |
+	3 << TRX_CMD_CONT_SIZE_SHIFT);
 	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL3, 0);
-	cvsfc_write(host, REG_SPI_NAND_TRX_CMD0, r_row_addr << TRX_CMD_CONT0_SHIFT | SPI_NAND_CMD_PAGE_READ_TO_CACHE);
+	cvsfc_write(host, REG_SPI_NAND_TRX_CMD0, r_row_addr << TRX_CMD_CONT0_SHIFT |
+	SPI_NAND_CMD_PAGE_READ_TO_CACHE);
 
 	cvsnfc_setup_intr(host);
-	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) | BIT_REG_TRX_START);
+	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) |
+	BIT_REG_TRX_START);
 
 	CVSNFC_CMD_WAIT_CPU_FINISH(host);
 	CVSNFC_CLEAR_INT(host);
@@ -939,8 +949,6 @@ static int spi_nand_read_page(struct cvsnfc_host *host, int page)
 
 	if (DEBUG_READ)
 		pr_info("<=%s\n", __func__);
-
-	//flush_dcache_all();
 
 	return 0;
 }
@@ -962,7 +970,7 @@ static void spi_nand_rw_dma_setup(struct cvsnfc_host *host, const uint8_t *buf, 
 #endif
 	if (DEBUG_DMA)
 		pr_info("%s: buf %p, len %d, %s, dmabase %p\n", __func__, buf, len,
-			 rw == 1 ? "dma write" : "dma read", host->dmabase);
+			rw == 1 ? "dma write" : "dma read", host->dmabase);
 
 	writel(0x00000003, host->dmabase + 0x010);
 	writel(0x00000f00, host->dmabase + 0x018);
@@ -989,10 +997,11 @@ static void spi_nand_rw_dma_setup(struct cvsnfc_host *host, const uint8_t *buf, 
 			pr_info("w0x10C: 0x%x\n", readl(host->dmabase + 0x10C + ch * (0x100)));
 
 		writel(0x00045441, host->dmabase + 0x118 + ch * (0x100));
-		writel(0x00000001, host->dmabase + 0x124 + ch * (0x100)); // [0:2] = 1 : MEM_TO_PER_DMAC, PER dst = 0
+		 // [0:2] = 1 : MEM_TO_PER_DMAC, PER dst = 0
+		writel(0x00000001, host->dmabase + 0x124 + ch * (0x100));
 
 		writel(dma_spi_nand << (ch * 8), remap_base); //PER dst => remap chx
-		uint32_t val = readl(remap_base) | 0x80000000; // update bit
+		u32 val = readl(remap_base) | 0x80000000; // update bit
 
 		writel(val, remap_base); // set sdma remap update bit
 
@@ -1019,10 +1028,11 @@ static void spi_nand_rw_dma_setup(struct cvsnfc_host *host, const uint8_t *buf, 
 			pr_info("r0x10C: 0x%x\n", readl(host->dmabase + 0x10C + ch * (0x100)));
 
 		writel(0x00046214, host->dmabase + 0x118 + ch * (0x100));
-		writel(0x00000002, host->dmabase + 0x124 + ch * (0x100)); // [0:2] = 2 : PER_TO_MEM_DMAC, PER src = 0
+		 // [0:2] = 2 : PER_TO_MEM_DMAC, PER src = 0
+		writel(0x00000002, host->dmabase + 0x124 + ch * (0x100));
 
 		writel(dma_spi_nand << (ch * 8), remap_base); //PER src => remap chx
-		uint32_t val = readl(remap_base) | 0x80000000; // update bit
+		u32 val = readl(remap_base) | 0x80000000; // update bit
 
 		writel(val, remap_base); // set sdma remap update bit
 
@@ -1030,17 +1040,17 @@ static void spi_nand_rw_dma_setup(struct cvsnfc_host *host, const uint8_t *buf, 
 			pr_info("r0x03000154: 0x%x\n", readl(remap_base));
 	}
 
-	//flush_dcache_range((unsigned long)buf, (unsigned long)(buf + len));
-
 	writel(0, host->dmabase + 0x120 + ch * (0x100));
 	writel(0x00000101, host->dmabase + 0x018);
 }
 
-static void spi_nand_set_read_from_cache_mode(struct cvsnfc_host *host, uint32_t mode, uint32_t r_col_addr)
+static void spi_nand_set_read_from_cache_mode(struct cvsnfc_host *host, uint32_t mode,
+					      uint32_t r_col_addr)
 {
 	switch (mode) {
 	case SPI_NAND_READ_FROM_CACHE_MODE_X1:
-		cvsfc_write(host, REG_SPI_NAND_TRX_CTRL3, BIT_REG_TRX_DMA_EN | BIT_REG_TRX_DUMMY_HIZ);
+		cvsfc_write(host, REG_SPI_NAND_TRX_CTRL3, BIT_REG_TRX_DMA_EN |
+		BIT_REG_TRX_DUMMY_HIZ);
 		cvsfc_write(host, REG_SPI_NAND_TRX_CMD0, r_col_addr << TRX_CMD_CONT0_SHIFT |
 			    SPI_NAND_CMD_READ_FROM_CACHE);
 		break;
@@ -1065,12 +1075,13 @@ static void spi_nand_set_read_from_cache_mode(struct cvsnfc_host *host, uint32_t
 
 static int parse_status_info(struct cvsnfc_host *host)
 {
-	uint32_t statusc0 = 0;
-	uint8_t ecc_sts = 0;
+	u32 statusc0 = 0;
+	u8 ecc_sts = 0;
 	int ret;
 
 	spi_feature_op(host, GET_OP, host->nand_chip_info->ecc_status_offset, &statusc0);
-	ecc_sts = (statusc0 & host->nand_chip_info->ecc_status_mask) >> host->nand_chip_info->ecc_status_shift;
+	ecc_sts = (statusc0 & host->nand_chip_info->ecc_status_mask) >>
+	host->nand_chip_info->ecc_status_shift;
 
 	if (ecc_sts == 0) {
 		pr_debug("ECC pass!!\n");
@@ -1090,7 +1101,6 @@ static int parse_status_info(struct cvsnfc_host *host)
 
 static int spi_nand_read_from_cache(struct cvsnfc_host *host, int col_addr, int len, void *buf)
 {
-
 	int ret = 0;
 	int r_col_addr = ((col_addr & 0xff00) >> 8) | ((col_addr & 0xff) << 8);
 
@@ -1101,16 +1111,19 @@ static int spi_nand_read_from_cache(struct cvsnfc_host *host, int col_addr, int 
 		pr_info("%s col_addr 0x%x, len %d\n", __func__, col_addr, len);
 
 	spi_nand_rw_dma_setup(host, buf, len, 0);
-	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL2, len << TRX_DATA_SIZE_SHIFT | 3 << TRX_CMD_CONT_SIZE_SHIFT);
+	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL2, len << TRX_DATA_SIZE_SHIFT |
+	3 << TRX_CMD_CONT_SIZE_SHIFT);
 
 	//here might be changed to use 4 bit mode if support QE bit
 	if (host->nand_chip_info->flags & FLAGS_ENABLE_X4_BIT)
-		spi_nand_set_read_from_cache_mode(host, SPI_NAND_READ_FROM_CACHE_MODE_X4, r_col_addr);
+		spi_nand_set_read_from_cache_mode(host, SPI_NAND_READ_FROM_CACHE_MODE_X4,
+						  r_col_addr);
 	else if (host->nand_chip_info->flags & FLAGS_ENABLE_X2_BIT)
-		spi_nand_set_read_from_cache_mode(host, SPI_NAND_READ_FROM_CACHE_MODE_X2, r_col_addr);
+		spi_nand_set_read_from_cache_mode(host, SPI_NAND_READ_FROM_CACHE_MODE_X2,
+						  r_col_addr);
 	else
-		spi_nand_set_read_from_cache_mode(host, SPI_NAND_READ_FROM_CACHE_MODE_X1, r_col_addr);
-
+		spi_nand_set_read_from_cache_mode(host, SPI_NAND_READ_FROM_CACHE_MODE_X1,
+						  r_col_addr);
 
 	cvsnfc_setup_intr(host);
 	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0,
@@ -1131,10 +1144,10 @@ static int spi_nand_read_from_cache(struct cvsnfc_host *host, int col_addr, int 
 #define SPI_NAND_PLANE_BIT_OFFSET	BIT(12)
 
 int cvsnfc_read_page(struct mtd_info *mtd, struct nand_chip *chip,
-		     uint8_t *buf, int bytes, int page)
+		     u8 *buf, int bytes, int page)
 {
 	struct cvsnfc_host *host = chip->priv;
-	uint32_t col_addr = 0;
+	u32 col_addr = 0;
 	struct cvsnfc_op *spi = host->spi;
 	int ret = 0;
 
@@ -1151,11 +1164,11 @@ int cvsnfc_read_page(struct mtd_info *mtd, struct nand_chip *chip,
 
 	spi_nand_read_page(host, page);
 
-	uint32_t blk_idx = page / host->block_page_cnt;
+	u32 blk_idx = page / host->block_page_cnt;
 
 	if (DEBUG_READ)
 		pr_info("%s, blk_idx %d, page 0x%x, chip->options 0x%x\n",
-			 __func__, blk_idx, page, chip->options);
+			__func__, blk_idx, page, chip->options);
 
 	if (host->flags & FLAGS_SET_PLANE_BIT && (blk_idx & BIT(0))) {
 		if (DEBUG_READ)
@@ -1165,16 +1178,17 @@ int cvsnfc_read_page(struct mtd_info *mtd, struct nand_chip *chip,
 
 	ret = spi_nand_read_from_cache(host, col_addr, mtd->writesize, buf);
 
-	if (ret == -EBADMSG) {
-		pr_info("%s : ECC status ECC_UNCORR on page 0x%x, block %d\n", __func__, page, blk_idx);
-	}
+	if (ret == -EBADMSG)
+		pr_info("%s : ECC status ECC_UNCORR on page 0x%x, block %d\n",
+			__func__, page, blk_idx);
 
 	return ret;
 }
 
-static void cv_spi_nand_adjust_freq(struct cvsnfc_host *host, uint8_t sck_l, uint8_t sck_h, uint16_t max_freq)
+static void cv_spi_nand_adjust_freq(struct cvsnfc_host *host, uint8_t sck_l, uint8_t sck_h,
+				    uint16_t max_freq)
 {
-	uint32_t val;
+	u32 val;
 
 	switch (max_freq) {
 	case SPI_NAND_FREQ_XTAL: /* use XTAL, 25/4 = 6.25Mhz */
@@ -1325,7 +1339,8 @@ freq_retry:
 		val2 = val1;
 		unsigned int nand_id;
 
-		val2 = (BIT_REG_RSP_DLY_OW_EN | (dly_ow_val << 8) | (rsp_pos_sel << 12) | (dly_line_sel << 16));
+		val2 = (BIT_REG_RSP_DLY_OW_EN | (dly_ow_val << 8) | (rsp_pos_sel << 12) |
+		(dly_line_sel << 16));
 		cvsfc_write(host, REG_SPI_NAND_BOOT_CTRL, val2);
 
 		cvsnfc_send_cmd_readid(host);
@@ -1336,10 +1351,10 @@ freq_retry:
 			int ret;
 
 			memset(header_buf, 0x0, 0x20);
-			ret = spi_nand_read_from_cache(host, 0, 0x20, header_buf); /* read first 32 bytes */
-			if (ret == -EBADMSG) {
+			ret = spi_nand_read_from_cache(host, 0, 0x20, header_buf);
+			if (ret == -EBADMSG)
 				printf("%s : ECC status ECC_UNCORR\n", __func__);
-			}
+
 			if (!memcmp(header_buf + PATTERN1_OFFSET, pattern1, 4) &&
 			    !memcmp(header_buf + PATTERN2_OFFSET, pattern2, 4)) {
 				if (dly_param_idx == 0 && dly_grp_idx == 0) {
@@ -1363,15 +1378,16 @@ freq_retry:
 	pr_info("dly_param_idx=%d, dly_grp_idx=%d\n", dly_param_idx, dly_grp_idx);
 	if (dly_param_idx != 0) { /* at least find 1 parameter */
 		for (int i = 0; i <= dly_grp_idx; i++) {
-
 			if (dly_grp[i].count > max_count) {
 				select_grp = i;
 				max_count = dly_grp[i].count;
 			}
-			pr_info("dly_param[%d].start=%d, count=%d\n", i, dly_grp[i].start, dly_grp[i].count);
+			pr_info("dly_param[%d].start=%d, count=%d\n", i, dly_grp[i].start,
+				dly_grp[i].count);
 		}
 
-		cvsfc_write(host, REG_SPI_NAND_BOOT_CTRL, dly_param[dly_grp[select_grp].start + (max_count / 2)]);
+		cvsfc_write(host, REG_SPI_NAND_BOOT_CTRL, dly_param[dly_grp[select_grp].start +
+		(max_count / 2)]);
 		return 0;
 	}
 
@@ -1413,14 +1429,14 @@ static int read_oob_data(struct mtd_info *mtd, uint8_t *buf, int page)
 {
 	struct nand_chip *chip = mtd->priv;
 	struct cvsnfc_host *host = chip->priv;
-	uint32_t col_addr = mtd->writesize;
-	uint32_t blk_idx = page / host->block_page_cnt;
+	u32 col_addr = mtd->writesize;
+	u32 blk_idx = page / host->block_page_cnt;
 	struct cvsnfc_op *spi = host->spi;
 	int ret = 0;
 
 	if (DEBUG_READ)
 		pr_info("%s, page 0x%x, buf %p, mtd->oobsize %d\n", __func__,
-			 page, buf, mtd->oobsize);
+			page, buf, mtd->oobsize);
 
 	if (spi->driver->select_die) {
 		unsigned int die_id = page / (host->diesize / host->pagesize);
@@ -1439,15 +1455,13 @@ static int read_oob_data(struct mtd_info *mtd, uint8_t *buf, int page)
 
 	ret = spi_nand_read_from_cache(host, col_addr, mtd->oobsize, buf);
 
-	if (DEBUG_READ) {
+	if (DEBUG_READ)
 		bbt_dump_buf("1oob data:", buf, 16);
-	}
 
 	cvsnfc_ctrl_ecc(mtd, 1);
 
-	if (ret != 0) {
+	if (ret != 0)
 		printf("%s : ECC status ret %d page 0x%x\n", __func__, ret, page);
-	}
 
 	return ret;
 }
@@ -1462,11 +1476,11 @@ static int cvsnfc_read_oob(struct mtd_info *mtd, struct nand_chip *chip,
 }
 
 int cvsnfc_read_page_raw(struct mtd_info *mtd, struct nand_chip *chip,
-			 uint8_t *buf, int oob_required, int page)
+			 u8 *buf, int oob_required, int page)
 {
 	struct cvsnfc_host *host = chip->priv;
-	uint32_t col_addr = 0;
-	uint32_t blk_idx = page / host->block_page_cnt;
+	u32 col_addr = 0;
+	u32 blk_idx = page / host->block_page_cnt;
 	struct cvsnfc_op *spi = host->spi;
 
 	if (DEBUG_READ)
@@ -1502,13 +1516,13 @@ static int cvsnfc_read_subpage(struct mtd_info *mtd, struct nand_chip *chip,
 			       u32 data_offs, u32 readlen, u8 *buf, int page)
 {
 	struct cvsnfc_host *host = chip->priv;
-	uint32_t col_addr = 0;
+	u32 col_addr = 0;
 	struct cvsnfc_op *spi = host->spi;
 	int ret = 0;
 
 	if (DEBUG_READ)
 		pr_info("=>%s, page 0x%x, data_offs %d, readlen %d\n",
-			 __func__, page, data_offs, readlen);
+			__func__, page, data_offs, readlen);
 
 	if (spi->driver->select_die) {
 		unsigned int die_id = page / (host->diesize / host->pagesize);
@@ -1520,7 +1534,7 @@ static int cvsnfc_read_subpage(struct mtd_info *mtd, struct nand_chip *chip,
 
 	spi_nand_read_page(host, page);
 
-	uint32_t blk_idx = page / host->block_page_cnt;
+	u32 blk_idx = page / host->block_page_cnt;
 
 	if (host->flags & FLAGS_SET_PLANE_BIT && (blk_idx & BIT(0))) {
 		pr_info("%s set plane bit for blkidx %d\n", __func__, blk_idx);
@@ -1529,9 +1543,8 @@ static int cvsnfc_read_subpage(struct mtd_info *mtd, struct nand_chip *chip,
 
 	ret = spi_nand_read_from_cache(host, col_addr, mtd->writesize, host->buffer);
 
-	if (ret != 0) {
+	if (ret != 0)
 		printf("%s : ECC status ret %d page 0x%x\n", __func__, ret, page);
-	}
 
 	if (DEBUG_READ)
 		bbt_dump_buf("data:", buf, 16);
@@ -1547,17 +1560,18 @@ static int cvsnfc_read_subpage(struct mtd_info *mtd, struct nand_chip *chip,
 static uint8_t spi_nand_prog_load(struct cvsnfc_host *host, const uint8_t *buf,
 				  size_t size, uint32_t col_addr, uint32_t qe)
 {
-	uint8_t cmd = qe ? SPI_NAND_CMD_PROGRAM_LOADX4 : SPI_NAND_CMD_PROGRAM_LOAD;
-	uint32_t r_col_addr = ((col_addr & 0xff00) >> 8) | ((col_addr & 0xff) << 8);
-	uint32_t ctrl3 = 0;
+	u8 cmd = qe ? SPI_NAND_CMD_PROGRAM_LOADX4 : SPI_NAND_CMD_PROGRAM_LOAD;
+	u32 r_col_addr = ((col_addr & 0xff00) >> 8) | ((col_addr & 0xff) << 8);
+	u32 ctrl3 = 0;
 
 	if (DEBUG_WRITE)
 		pr_info("=>%s size %ld, col_addr 0x%x, r_col_addr 0x%x,  qe %d\n",
-			 __func__, size, col_addr, r_col_addr, qe);
+			__func__, size, col_addr, r_col_addr, qe);
 
 	spi_nand_rw_dma_setup(host, buf, size, 1);
 
-	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL2, (size << TRX_DATA_SIZE_SHIFT) | 2 << TRX_CMD_CONT_SIZE_SHIFT);
+	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL2, (size << TRX_DATA_SIZE_SHIFT) |
+	2 << TRX_CMD_CONT_SIZE_SHIFT);
 
 	ctrl3 = qe ? (BIT_REG_TRX_RW | BIT_REG_TRX_DMA_EN | SPI_NAND_CTRL3_IO_TYPE_X4_MODE) :
 		      (BIT_REG_TRX_RW | BIT_REG_TRX_DMA_EN);
@@ -1566,7 +1580,8 @@ static uint8_t spi_nand_prog_load(struct cvsnfc_host *host, const uint8_t *buf,
 	cvsfc_write(host, REG_SPI_NAND_TRX_CMD0, cmd | (r_col_addr << TRX_CMD_CONT0_SHIFT));
 
 	cvsnfc_setup_intr(host);
-	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) | BIT_REG_TRX_START);
+	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) |
+	BIT_REG_TRX_START);
 
 	CVSNFC_CMD_WAIT_CPU_FINISH(host);
 	CVSNFC_WAIT_DMA_FINISH(host);
@@ -1580,7 +1595,8 @@ static uint8_t spi_nand_prog_load(struct cvsnfc_host *host, const uint8_t *buf,
 
 static int spi_nand_prog_exec(struct cvsnfc_host *host, uint32_t row_addr)
 {
-	uint32_t r_row_addr = ((row_addr & 0xff0000) >> 16) | (row_addr & 0xff00) | ((row_addr & 0xff) << 16);
+	u32 r_row_addr = ((row_addr & 0xff0000) >> 16) | (row_addr & 0xff00) |
+	((row_addr & 0xff) << 16);
 
 	if (DEBUG_WRITE)
 		pr_info("row_addr 0x%x\n", row_addr);
@@ -1590,11 +1606,13 @@ static int spi_nand_prog_exec(struct cvsnfc_host *host, uint32_t row_addr)
 
 	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL2, 3 << TRX_CMD_CONT_SIZE_SHIFT);
 	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL3, 0);
-	cvsfc_write(host, REG_SPI_NAND_TRX_CMD0, SPI_NAND_CMD_PROGRAM_EXECUTE | (r_row_addr << TRX_CMD_CONT0_SHIFT));
+	cvsfc_write(host, REG_SPI_NAND_TRX_CMD0, SPI_NAND_CMD_PROGRAM_EXECUTE |
+	(r_row_addr << TRX_CMD_CONT0_SHIFT));
 	cvsfc_write(host, REG_SPI_NAND_RSP_POLLING, 0xff00ff);
 
 	cvsnfc_setup_intr(host);
-	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) | BIT_REG_TRX_START);
+	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) |
+	BIT_REG_TRX_START);
 
 	CVSNFC_CMD_WAIT_CPU_FINISH(host);
 	CVSNFC_CLEAR_INT(host);
@@ -1608,11 +1626,11 @@ static int spi_nand_prog_exec(struct cvsnfc_host *host, uint32_t row_addr)
 }
 
 static int write_page(struct mtd_info *mtd, struct nand_chip *chip,
-		      const uint8_t *buf, int oob_required, int page)
+		      const u8 *buf, int oob_required, int page)
 {
 	struct cvsnfc_host *host = chip->priv;
 	struct cvsnfc_op *spi = host->spi;
-	uint32_t col_addr = 0;
+	u32 col_addr = 0;
 
 	if (DEBUG_WRITE)
 		printf("=>%s, buf %p, page 0x%x\n", __func__, buf, page);
@@ -1628,8 +1646,8 @@ static int write_page(struct mtd_info *mtd, struct nand_chip *chip,
 		return -1;
 	}
 
-	uint32_t row_addr = page;
-	uint32_t blk_idx = page /  host->block_page_cnt;
+	u32 row_addr = page;
+	u32 blk_idx = page /  host->block_page_cnt;
 
 	if (DEBUG_WRITE)
 		pr_info("blk idx %d\n", blk_idx);
@@ -1655,7 +1673,7 @@ static int write_page(struct mtd_info *mtd, struct nand_chip *chip,
 }
 
 int cvsnfc_write_page(struct mtd_info *mtd, struct nand_chip *chip,
-		      const uint8_t *buf, int oob_required, int page)
+		      const u8 *buf, int oob_required, int page)
 {
 	/*
 	 * for regular page writes, we let HW handle all the ECC
@@ -1756,7 +1774,7 @@ int cvsnfc_host_init(struct cvsnfc_host *host)
 		host->set_system_clock(NULL, ENABLE);
 
 	host->buforg = kmalloc((CVSNFC_BUFFER_LEN + CVSNFC_DMA_ALIGN),
-				GFP_KERNEL);
+			       GFP_KERNEL);
 
 //	if (!host->buforg) {
 //		pr_err("cvsnfc: Can't malloc memory for NAND driver.\n");

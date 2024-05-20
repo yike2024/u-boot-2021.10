@@ -409,7 +409,9 @@ static void disp_set_mem(struct soph_crtc *crtc, struct disp_mem *mem)
 	disp_reg_set_shadow_mask(crtc, false);
 
 	intf = crtc->disp_id ? DRM_INTF_DISP1 : DRM_INTF_DISP0;
+#if 0
 	extend_axi_to_36bit(mem->addr0 >> 32, intf);
+#endif
 	disp_set_addr(crtc, mem->addr0, mem->addr1, mem->addr2);
 }
 
@@ -621,10 +623,10 @@ static const struct soph_crtc soph_disp1_data = {
 };
 
 static const struct udevice_id soph_disp_ids[] = {
-	{  .compatible = "cvitek,athena2_disp0",
+	{  .compatible = "cvitek,cv186x_disp0",
 	   .data = (ulong)&soph_disp0_data,
 	},
-	{  .compatible = "cvitek,athena2_disp1",
+	{  .compatible = "cvitek,cv186x_disp1",
 	   .data = (ulong)&soph_disp1_data,
 	}, { }
 };

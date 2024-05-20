@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0-only
 /**********************************************************************
  *
  * usb_tty.c
@@ -31,17 +32,17 @@
 #include "include/dps.h"
 
 #ifdef BUILD_ATF
-extern uint16_t cvi_usb_vid;
+extern u16 cvi_usb_vid;
 #else
-uint16_t cvi_usb_vid = 0x3346;
+u16 cvi_usb_vid = 0x3346;
 #endif
 
-uint16_t cvi_usb_pid;
+u16 cvi_usb_pid;
 
-typedef void (*cvi_reqComplete)(struct usb_ep *ep, struct usb_request *req);
+typedef void (*cvi_req_complete)(struct usb_ep *ep, struct usb_request *req);
 
-static void bulkOutCmplMain(struct usb_ep *ep, struct usb_request *req);
-static void sramOutReqS2D(uint64_t addr, uint32_t size);
+static void bulk_out_cmpl_main(struct usb_ep *ep, struct usb_request *req);
+static void sram_out_req_s2d(u64 addr, u32 size);
 
 #define GLOBAL_MEM_START_ADDR 0x80000000
 
@@ -61,37 +62,37 @@ struct dwc3_device cvi_dwc3_dev = {
 };
 
 /* variable declare */
-static uint8_t *bulkBuf, *cmdBuf, *ep0Buff;
-static struct usb_ep *epIn, *epOut, *epInNotify;
-static struct usb_request *bulkInReq, *bulkOutReq, *ep0Req, *IntInReq;
-static uint8_t configValue;
-static uint8_t configBreak;
-static uint8_t acm_configValue;
-static uint8_t mem_alloc_cnt;
-static uint32_t transfer_size;
-static uint8_t flagEnterDL;
+static u8 *bulk_buf, *cmd_buf, *ep0_buff;
+static struct usb_ep *epin, *epout, *epin_notify;
+static struct usb_request *bulk_in_req, *bulk_out_req, *ep0_req, *int_in_req;
+static u8 config_value;
+static u8 config_break;
+static u8 acm_config_value;
+static u8 mem_alloc_cnt;
+static u32 transfer_size;
+static u8 flag_enter_dL;
 struct f_acm *acm;
 
-static uint8_t *bulkBufAlloc;
-static uint8_t *cmdBufAlloc;
-static uint8_t *cb0_buf;
-static uint8_t *cb1_buf;
-static uint8_t *cb2_buf;
-static uint8_t *ep0BuffAlloc;
-static uint8_t *rsp_buf;
-static uint8_t *acm_buf;
-static uint8_t *setup_buf;
-static uint8_t *handler;
+static u8 *bulk_buf_alloc;
+static u8 *cmd_buf_alloc;
+static u8 *cb0_buf;
+static u8 *cb1_buf;
+static u8 *cb2_buf;
+static u8 *ep0_buff_alloc;
+static u8 *rsp_buf;
+static u8 *acm_buf;
+static u8 *setup_buf;
+static u8 *handler;
 
 struct usb_msg_header {
-	uint8_t token;
-	uint8_t len_hi;
-	uint8_t len_low;
-	uint8_t addr4;
-	uint8_t addr3;
-	uint8_t addr2;
-	uint8_t addr1;
-	uint8_t addr0;
+	u8 token;
+	u8 len_hi;
+	u8 len_low;
+	u8 addr4;
+	u8 addr3;
+	u8 addr2;
+	u8 addr1;
+	u8 addr0;
 } __packed;
 
 struct usb_msg {
@@ -109,21 +110,21 @@ struct usb_msg_d2s {
 } __packed;
 
 struct usb_rsp {
-	uint8_t no_use0;
-	uint8_t no_use1;
-	uint8_t crc16_hi;
-	uint8_t crc16_low;
-	uint8_t no_use3;
-	uint8_t no_use4;
-	uint8_t token;
-	uint8_t ack_index;
-	uint8_t reserved[RSP_SIZE - 8];
+	u8 no_use0;
+	u8 no_use1;
+	u8 crc16_hi;
+	u8 crc16_low;
+	u8 no_use3;
+	u8 no_use4;
+	u8 token;
+	u8 ack_index;
+	u8 reserved[RSP_SIZE - 8];
 } __packed;
 
 struct sram_info {
-	uint64_t sram_dest;
-	uint32_t total_len;
-	uint8_t reserved[4];
+	u64 sram_dest;
+	u32 total_len;
+	u8 reserved[4];
 } packed;
 
 static struct sram_info sram_info;
@@ -154,45 +155,45 @@ static char *_allow_wl_areas[] = { "LOCK_HASH0_PUBLIC",
 #endif // USB_RW_EFUSE
 
 /* string will be filled then in initializing section */
-static char vendorDesc[sizeof(USB_MANUFACTURER_STRING) * 2 + 2];
-static char productDesc[sizeof(USB_PRODUCT_STRING) * 2 + 2];
-static char serialDesc[sizeof(USB_SERIAL_NUMBER_STRING) * 2 + 2];
+static char vendor_desc[sizeof(USB_MANUFACTURER_STRING) * 2 + 2];
+static char product_desc[sizeof(USB_PRODUCT_STRING) * 2 + 2];
+static char serial_desc[sizeof(USB_SERIAL_NUMBER_STRING) * 2 + 2];
 
-void __attribute__((optimize("O0"))) set_config_break(uint8_t value)
+void __attribute__((optimize("O0"))) set_config_break(u8 value)
 {
-	configBreak = value;
+	config_break = value;
 }
 
-uint8_t __attribute__((optimize("O0"))) get_config_break(void)
+u8 __attribute__((optimize("O0"))) get_config_break(void)
 {
-	return configBreak;
+	return config_break;
 }
 
-void __attribute__((optimize("O0"))) set_acm_config(uint8_t value)
+void __attribute__((optimize("O0"))) set_acm_config(u8 value)
 {
-	acm_configValue = value;
+	acm_config_value = value;
 }
 
-uint8_t __attribute__((optimize("O0"))) get_acm_config(void)
+u8 __attribute__((optimize("O0"))) get_acm_config(void)
 {
-	return acm_configValue;
+	return acm_config_value;
 }
 
 static void init_param(void)
 {
-	bulkBuf = NULL;
-	cmdBuf = NULL;
-	ep0Buff = NULL;
-	epIn = NULL;
-	epOut = NULL;
-	epInNotify = NULL;
-	bulkInReq = NULL;
-	bulkOutReq = NULL;
-	ep0Req = NULL;
-	IntInReq = NULL;
-	configValue = 0;
-	configBreak = 0;
-	acm_configValue = 0;
+	bulk_buf = NULL;
+	cmd_buf = NULL;
+	ep0_buff = NULL;
+	epin = NULL;
+	epout = NULL;
+	epin_notify = NULL;
+	bulk_in_req = NULL;
+	bulk_out_req = NULL;
+	ep0_req = NULL;
+	int_in_req = NULL;
+	config_value = 0;
+	config_break = 0;
+	acm_config_value = 0;
 	mem_alloc_cnt = 0;
 	transfer_size = 0;
 	acm = NULL;
@@ -200,12 +201,12 @@ static void init_param(void)
 
 static int acm_mem_init(void)
 {
-	bulkBufAlloc = memalign(CONFIG_SYS_CACHELINE_SIZE, ALIGN_CACHE_SIZE(BUF_SIZE));
-	memset(bulkBufAlloc, 0, ALIGN_CACHE_SIZE(BUF_SIZE));
-	cmdBufAlloc = memalign(CONFIG_SYS_CACHELINE_SIZE, ALIGN_CACHE_SIZE(BUF_SIZE));
-	memset(cmdBufAlloc, 0, ALIGN_CACHE_SIZE(BUF_SIZE));
-	ep0BuffAlloc = memalign(CONFIG_SYS_CACHELINE_SIZE, ALIGN_CACHE_SIZE(EP0_SIZE));
-	memset(ep0BuffAlloc, 0, ALIGN_CACHE_SIZE(EP0_SIZE));
+	bulk_buf_alloc = memalign(CONFIG_SYS_CACHELINE_SIZE, ALIGN_CACHE_SIZE(BUF_SIZE));
+	memset(bulk_buf_alloc, 0, ALIGN_CACHE_SIZE(BUF_SIZE));
+	cmd_buf_alloc = memalign(CONFIG_SYS_CACHELINE_SIZE, ALIGN_CACHE_SIZE(BUF_SIZE));
+	memset(cmd_buf_alloc, 0, ALIGN_CACHE_SIZE(BUF_SIZE));
+	ep0_buff_alloc = memalign(CONFIG_SYS_CACHELINE_SIZE, ALIGN_CACHE_SIZE(EP0_SIZE));
+	memset(ep0_buff_alloc, 0, ALIGN_CACHE_SIZE(EP0_SIZE));
 	setup_buf = memalign(CONFIG_SYS_CACHELINE_SIZE, ALIGN_CACHE_SIZE(STP_SIZE));
 	memset(setup_buf, 0, ALIGN_CACHE_SIZE(STP_SIZE));
 	handler = memalign(CONFIG_SYS_CACHELINE_SIZE, ALIGN_CACHE_SIZE(HANDLER_SIZE));
@@ -215,7 +216,7 @@ static int acm_mem_init(void)
 	cb1_buf = malloc(REQ_SIZE);
 	memset(cb1_buf, 0, REQ_SIZE);
 	cb2_buf = malloc(REQ_SIZE);
-	memset(cb2_buf, 0, REQ_SIZE);;
+	memset(cb2_buf, 0, REQ_SIZE);
 	rsp_buf = malloc(RSP_SIZE);
 	memset(rsp_buf, 0, RSP_SIZE);
 	acm_buf = malloc(ACM_SIZE);
@@ -225,15 +226,15 @@ static int acm_mem_init(void)
 	set_acm_config(0);
 	mem_alloc_cnt = 0;
 	transfer_size = 0;
-	flagEnterDL = 0;
+	flag_enter_dL = 0;
 	return 0;
 }
 
 static void acm_mem_release(void)
 {
-	free(bulkBufAlloc);
-	free(cmdBufAlloc);
-	free(ep0BuffAlloc);
+	free(bulk_buf_alloc);
+	free(cmd_buf_alloc);
+	free(ep0_buff_alloc);
 	free(setup_buf);
 	free(handler);
 	free(cb0_buf);
@@ -245,9 +246,9 @@ static void acm_mem_release(void)
 
 void print_buf_addr(void)
 {
-	INFO("bulkBufAlloc: %p\n", bulkBufAlloc);
-	INFO("cmdBufAlloc: %p\n", cmdBufAlloc);
-	INFO("ep0BuffAlloc: %p\n", ep0BuffAlloc);
+	INFO("bulk_buf_alloc: %p\n", bulk_buf_alloc);
+	INFO("cmd_buf_alloc: %p\n", cmd_buf_alloc);
+	INFO("ep0_buff_alloc: %p\n", ep0_buff_alloc);
 	INFO("setup_buf: %p\n", setup_buf);
 	// INFO("handler: %p\n", handler);
 	INFO("cb0_buf: %p\n", cb0_buf);
@@ -263,7 +264,7 @@ void AcmIsr(void)
 	dwc3_uboot_handle_interrupt(0);
 }
 
-static int getDescAcm(CH9_UsbSpeed speed, uint8_t *acmDesc)
+static int get_desc_acm(CH9_USBSPEED speed, u8 *acm_desc)
 {
 	int i = 0;
 	void *desc;
@@ -288,10 +289,10 @@ static int getDescAcm(CH9_UsbSpeed speed, uint8_t *acmDesc)
 	desc = (*tab)[i];
 
 	while (desc) {
-		int length = *(uint8_t *)desc;
+		int length = *(u8 *)desc;
 
 		VERBOSE("acm get length %d\n", length);
-		memcpy(&acmDesc[sum], desc, length);
+		memcpy(&acm_desc[sum], desc, length);
 		sum += length;
 		desc = (*tab)[++i];
 	}
@@ -299,7 +300,7 @@ static int getDescAcm(CH9_UsbSpeed speed, uint8_t *acmDesc)
 	return sum;
 }
 
-static void clearReq(struct usb_request *req)
+static void clear_req(struct usb_request *req)
 {
 	memset(req, 0, sizeof(*req));
 }
@@ -315,7 +316,7 @@ static void disconnect(struct usb_gadget *gadget)
 {
 	set_acm_config(0);
 	mem_alloc_cnt = 1;
-	configValue = 0;
+	config_value = 0;
 	NOTICE("Application: %s\n", __func__);
 }
 
@@ -324,12 +325,11 @@ static void resume(struct usb_gadget *gadget)
 	VERBOSE("Application: %s\n", __func__);
 }
 
-static void reqComplete(struct usb_ep *ep, struct usb_request *req)
+static void req_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	VERBOSE("Request on endpoint completed\n");
-	if (req->status == -EIO) {
+	if (req->status == -EIO)
 		NOTICE("IO Abort !!!!!\n");
-	}
 }
 
 static void suspend(struct usb_gadget *gadget)
@@ -339,367 +339,141 @@ static void suspend(struct usb_gadget *gadget)
 
 static void resetOutReq(void)
 {
-	VERBOSE("epOut->ops->queue\n");
-	bulkOutReq->length = transfer_size;
-	bulkOutReq->buf = cmdBuf;
-	bulkOutReq->dma = (uintptr_t)cmdBuf;
-	bulkOutReq->complete = bulkOutCmplMain;
-	cvi_cache_flush(bulkOutReq->dma, bulkOutReq->length);
-	epOut->ops->queue(epOut, bulkOutReq, 0);
+	VERBOSE("epout->ops->queue\n");
+	bulk_out_req->length = transfer_size;
+	bulk_out_req->buf = cmd_buf;
+	bulk_out_req->dma = (uintptr_t)cmd_buf;
+	bulk_out_req->complete = bulk_out_cmpl_main;
+	cvi_cache_flush(bulk_out_req->dma, bulk_out_req->length);
+	epout->ops->queue(epout, bulk_out_req, 0);
 }
 
-static void bulkResetOutReq(struct usb_ep *ep, struct usb_request *req)
+static void bulk_reset_out_req(struct usb_ep *ep, struct usb_request *req)
 {
 	/* INFO("bulkReset%sReq complete\n", (ep->address == BULK_EP_IN)?"In":"Out"); */
 	resetOutReq();
 }
 
-static void sendInReq(uint32_t length, uint8_t token, cvi_reqComplete complete,
-		      uint8_t *pRsp, uint8_t rspLen)
+static void send_in_req(u32 length, u8 token, cvi_req_complete complete,
+			u8 *prsp, u8 rsplen)
 {
-	uint16_t crc;
-	static uint8_t ack_idx;
+	u16 crc;
+	static u8 ack_idx;
 	struct usb_rsp *rsp = (struct usb_rsp *)rsp_buf;
 
 	memset(rsp_buf, 0, RSP_SIZE);
-	if (pRsp && rspLen > 0 && rspLen <= (RSP_SIZE - 8))
-		memcpy(rsp_buf + 8, pRsp, rspLen);
-	crc = crc16_ccitt(0, cmdBuf, length);
+	if (prsp && rsplen > 0 && rsplen <= (RSP_SIZE - 8))
+		memcpy(rsp_buf + 8, prsp, rsplen);
+	crc = crc16_ccitt(0, cmd_buf, length);
 	VERBOSE("CRC: %x\n", crc);
 	rsp->crc16_hi = (crc >> 8) & 0xFF;
 	rsp->crc16_low = crc & 0xFF;
 	rsp->ack_index = ack_idx;
 	rsp->token = token;
 	ack_idx++;
-	clearReq(bulkInReq);
-	if (rspLen > 8)
-		bulkInReq->length = RSP_SIZE;
+	clear_req(bulk_in_req);
+	if (rsplen > 8)
+		bulk_in_req->length = RSP_SIZE;
 	else
-		bulkInReq->length = 16;
-	bulkInReq->buf = rsp_buf;
-	bulkInReq->dma = (uintptr_t)rsp_buf;
-	bulkInReq->complete = complete;
-	VERBOSE("epIn->ops->queue\n");
+		bulk_in_req->length = 16;
+	bulk_in_req->buf = rsp_buf;
+	bulk_in_req->dma = (uintptr_t)rsp_buf;
+	bulk_in_req->complete = complete;
+	VERBOSE("epin->ops->queue\n");
 
-	cvi_cache_flush(bulkInReq->dma, bulkInReq->length);
-	epIn->ops->queue(epIn, bulkInReq, 0);
+	cvi_cache_flush(bulk_in_req->dma, bulk_in_req->length);
+	epin->ops->queue(epin, bulk_in_req, 0);
 }
 
-static void bulkCmplEmpty(struct usb_ep *ep, struct usb_request *req)
+static void bulk_cmpl_empty(struct usb_ep *ep, struct usb_request *req)
 {
 	VERBOSE("%s\n", __func__);
 }
 
-static void resetOutReqS2D(uint64_t addr, size_t size, cvi_reqComplete complete)
+static void reset_out_req_s2d(u64 addr, size_t size, cvi_req_complete complete)
 {
-	/* INFO("epOut->ops->queue S2D, addr:0x%lx, size:0x%lx\n", addr, size); */
-	bulkOutReq->length = size;
-	bulkOutReq->buf = (uint8_t *)addr;
-	bulkOutReq->dma = (uintptr_t)addr;
-	bulkOutReq->complete = complete;
+	/* INFO("epout->ops->queue S2D, addr:0x%lx, size:0x%lx\n", addr, size); */
+	bulk_out_req->length = size;
+	bulk_out_req->buf = (u8 *)addr;
+	bulk_out_req->dma = (uintptr_t)addr;
+	bulk_out_req->complete = complete;
 
-	cvi_cache_flush(bulkOutReq->dma, bulkOutReq->length);
-	epOut->ops->queue(epOut, bulkOutReq, 0);
+	cvi_cache_flush(bulk_out_req->dma, bulk_out_req->length);
+	epout->ops->queue(epout, bulk_out_req, 0);
 }
 
-static void sramCompl(struct usb_ep *ep, struct usb_request *req)
+static void sram_compl(struct usb_ep *ep, struct usb_request *req)
 {
-	uint32_t left = sram_info.total_len -= req->length;
-	uint64_t target = sram_info.sram_dest + req->length;
+	u32 left = sram_info.total_len -= req->length;
+	u64 target = sram_info.sram_dest + req->length;
 	/* INFO("sram copy data to 0x%lx, len = 0x%x\n", sram_info.sram_dest, req->length); */
 	memcpy((void *)sram_info.sram_dest, (void *)req->buf, req->length);
 
 	if (left == 0U)
 		resetOutReq();
 	else
-		sramOutReqS2D(target, left);
+		sram_out_req_s2d(target, left);
 }
 
-static void sramOutReqS2D(uint64_t addr, uint32_t size)
+static void sram_out_req_s2d(u64 addr, u32 size)
 {
 	sram_info.total_len = size;
 	sram_info.sram_dest = addr;
 
-	bulkOutReq->length = (sram_info.total_len > BUF_SIZE) ?
+	bulk_out_req->length = (sram_info.total_len > BUF_SIZE) ?
 				     BUF_SIZE :
 					   sram_info.total_len;
-	bulkOutReq->buf = bulkBuf;
-	bulkOutReq->dma = (uintptr_t)bulkBuf;
-	bulkOutReq->complete = sramCompl;
+	bulk_out_req->buf = bulk_buf;
+	bulk_out_req->dma = (uintptr_t)bulk_buf;
+	bulk_out_req->complete = sram_compl;
 
-	cvi_cache_flush(bulkOutReq->dma, bulkOutReq->length);
-	epOut->ops->queue(epOut, bulkOutReq, 0);
+	cvi_cache_flush(bulk_out_req->dma, bulk_out_req->length);
+	epout->ops->queue(epout, bulk_out_req, 0);
 }
 
-static void sendInReqD2S(uint64_t addr, size_t size, cvi_reqComplete complete)
+static void send_in_req_d2s(u64 addr, size_t size, cvi_req_complete complete)
 {
-	/* INFO("epIn->ops->queue D2S\n"); */
-	clearReq(bulkInReq);
-	bulkInReq->length = size;
-	bulkInReq->buf = (uint8_t *)addr;
-	bulkInReq->dma = (uintptr_t)addr;
-	bulkInReq->complete = complete;
+	/* INFO("epin->ops->queue D2S\n"); */
+	clear_req(bulk_in_req);
+	bulk_in_req->length = size;
+	bulk_in_req->buf = (u8 *)addr;
+	bulk_in_req->dma = (uintptr_t)addr;
+	bulk_in_req->complete = complete;
 
-	cvi_cache_flush(bulkInReq->dma, bulkInReq->length);
-	epIn->ops->queue(epIn, bulkInReq, 0);
+	cvi_cache_flush(bulk_in_req->dma, bulk_in_req->length);
+	epin->ops->queue(epin, bulk_in_req, 0);
 }
 
-#if USB_RW_EFUSE // Mark_to_do
-static int ahex2int(char a, char b)
-{
-	a = (a <= '9') ? a - '0' : (a & 0x7) + 9;
-	b = (b <= '9') ? b - '0' : (b & 0x7) + 9;
-
-	return (a << 4) + b;
-}
-
-static void efusew_cmd(uint32_t length, uint8_t *ack_result, uint8_t ack_len)
-{
-	uint8_t read_buf[128];
-	uint32_t i;
-
-	if (strncmp((void *)((uintptr_t)cmdBuf + (uintptr_t)HEADER_SIZE),
-		    "efusew ", strlen("efusew ")) == 0) {
-		char cmd[128] = { '\0' };
-		uint8_t area_idx = 0;
-		uint8_t area_size = 0;
-		uint8_t data_offset = 0;
-		uint8_t efuse_locked = 0;
-#ifdef CONFIG_HW_WATCHDOG
-		hw_watchdog_disable();
-#endif
-		strlcpy(cmd,
-			(void *)((uintptr_t)cmdBuf + (uintptr_t)HEADER_SIZE),
-			min((uint32_t)(length - HEADER_SIZE),
-			    (uint32_t)sizeof(cmd)));
-		NOTICE("run command: %s\n", cmd);
-		run_command(cmd, 0);
-
-		memset(ack_result, ACK_FAIL, ack_len);
-
-		// Check param for lock efuse area
-		for (area_idx = 0; area_idx < ARRAY_SIZE(_allow_wl_areas);
-		     area_idx++) {
-			if (strncmp((void *)((uintptr_t)cmdBuf +
-					     (uintptr_t)HEADER_SIZE +
-					     strlen("efusew ")),
-				    _allow_wl_areas[area_idx],
-				    strlen(_allow_wl_areas[area_idx])) == 0) {
-				area_idx += CVI_EFUSE_AREA_LAST + 1;
-
-				NOTICE("area_idx = %d\n", area_idx);
-				if (area_idx >=
-				    CVI_EFUSE_LOCK_WRITE_HASH0_PUBLIC) {
-					efuse_locked = CVI_EFUSE_IsWriteLocked(
-						area_idx);
-					NOTICE("CVI_EFUSE_IsWriteLocked %d\n",
-					       efuse_locked);
-				} else {
-					efuse_locked =
-						CVI_EFUSE_IsLocked(area_idx);
-					NOTICE("CVI_EFUSE_IsLocked %d\n",
-					       efuse_locked);
-				}
-
-				if (efuse_locked > 0)
-					ack_result[0] = ACK_PASS;
-				break;
-			}
-		}
-
-		// Read efuse data from corresponding area
-		for (area_idx = 0; area_idx < ARRAY_SIZE(_allow_areas);
-		     area_idx++) {
-			if (strncmp((void *)((uintptr_t)cmdBuf +
-					     (uintptr_t)HEADER_SIZE +
-					     strlen("efusew ")),
-				    _allow_areas[area_idx],
-				    strlen(_allow_areas[area_idx])) == 0) {
-				NOTICE("area_idx = %d\n", area_idx);
-				switch (area_idx) {
-				case CVI_EFUSE_AREA_USER:
-					area_size = 40;
-					break;
-				case CVI_EFUSE_AREA_DEVICE_ID:
-					area_size = 8;
-					break;
-				case CVI_EFUSE_AREA_HASH0_PUBLIC:
-					area_size = 32;
-					break;
-				case CVI_EFUSE_AREA_LOADER_EK:
-					area_size = 16;
-					break;
-				case CVI_EFUSE_AREA_DEVICE_EK:
-					area_size = 16;
-					break;
-				default:
-					NOTICE("efuse area %d\n", area_idx);
-					break;
-				}
-
-				memset(read_buf, 0, sizeof(read_buf));
-				memset(ack_result, ACK_FAIL, ack_len);
-				ack_result[0] = ACK_PASS;
-
-				CVI_EFUSE_Read(area_idx, read_buf, area_size);
-				for (i = 0; i < area_size; i++)
-					INFO("efuse_data[%d] = %x\n", i,
-					     read_buf[i]);
-				for (i = 0; i < length; i++)
-					INFO("cmdBuf[%d] = %x\n", i, cmdBuf[i]);
-
-				// Verify results
-				data_offset = HEADER_SIZE + strlen("efusew ") +
-					      strlen(_allow_areas[area_idx]) +
-					      1;
-				INFO("data_offset %x\n", data_offset);
-				for (i = 0; i < (length - data_offset) / 2;
-				     i++) {
-					uint8_t data;
-
-					data = ahex2int(
-						cmdBuf[data_offset + i * 2],
-						cmdBuf[data_offset + i * 2 + 1]);
-					INFO("data = %x; read_buf = %x\n", data,
-					     read_buf[i]);
-					if (data != read_buf[i]) {
-						NOTICE("ERROR err_byte_idx = %x\n",
-						       i);
-						NOTICE("ERROR write_byte = %x\n",
-						       data);
-						NOTICE("ERROR efuse_byte = %x\n",
-						       read_buf[i]);
-						ack_result[0] = ACK_FAIL;
-						ack_result[1] = i;
-						ack_result[2] = data;
-						ack_result[3] = read_buf[i];
-						break;
-					}
-				}
-				break;
-			}
-		}
-	}
-}
-
-static void efuser_cmd(uint32_t length, uint8_t *read_buf, uint8_t buf_len)
-{
-	uint8_t i;
-
-	if (strncmp((void *)((uintptr_t)cmdBuf + (uintptr_t)HEADER_SIZE),
-		    "efuser ", strlen("efuser ")) == 0) {
-		char cmd[128] = { '\0' };
-		uint8_t area_idx = 0;
-		uint8_t area_size = 0;
-#ifdef CONFIG_HW_WATCHDOG
-		hw_watchdog_disable();
-#endif
-		strlcpy(cmd,
-			(void *)((uintptr_t)cmdBuf + (uintptr_t)HEADER_SIZE),
-			min((uint32_t)(length - HEADER_SIZE),
-			    (uint32_t)sizeof(cmd)));
-		NOTICE("run command: %s\n", cmd);
-		run_command(cmd, 0);
-
-		// Read efuse data from corresponding area
-		for (area_idx = 0; area_idx < ARRAY_SIZE(_allow_areas);
-		     area_idx++) {
-			if (strncmp((void *)((uintptr_t)cmdBuf +
-					     (uintptr_t)HEADER_SIZE +
-					     strlen("efuser ")),
-				    _allow_areas[area_idx],
-				    strlen(_allow_areas[area_idx])) == 0) {
-				NOTICE("area_idx = %d\n", area_idx);
-				switch (area_idx) {
-				case CVI_EFUSE_AREA_USER:
-					area_size = 40;
-					break;
-				case CVI_EFUSE_AREA_DEVICE_ID:
-					area_size = 8;
-					break;
-				case CVI_EFUSE_AREA_HASH0_PUBLIC:
-					area_size = 32;
-					break;
-				case CVI_EFUSE_AREA_LOADER_EK:
-					area_size = 16;
-					break;
-				case CVI_EFUSE_AREA_DEVICE_EK:
-					area_size = 16;
-					break;
-				default:
-					NOTICE("efuse area %d\n", area_idx);
-					break;
-				}
-
-				memset(read_buf, 0, buf_len);
-				CVI_EFUSE_Read(area_idx, read_buf, area_size);
-				for (i = 0; i < area_size; i++)
-					INFO("efuse_data[%d] = %x\n", i,
-					     read_buf[i]);
-				break;
-			}
-		}
-
-		for (area_idx = 0; area_idx < ARRAY_SIZE(_allow_wl_areas);
-		     area_idx++) {
-			if (strncmp((void *)((uintptr_t)cmdBuf +
-					     (uintptr_t)HEADER_SIZE +
-					     strlen("efuser ")),
-				    _allow_wl_areas[area_idx],
-				    strlen(_allow_wl_areas[area_idx])) == 0) {
-				area_idx += CVI_EFUSE_AREA_LAST + 1;
-				NOTICE("area_idx = %d\n", area_idx);
-
-				memset(read_buf, 0, buf_len);
-				if (area_idx >=
-				    CVI_EFUSE_LOCK_WRITE_HASH0_PUBLIC) {
-					read_buf[0] = CVI_EFUSE_IsWriteLocked(
-						area_idx);
-					NOTICE("CVI_EFUSE_IsWriteLocked %d\n",
-					       read_buf[0]);
-				} else {
-					read_buf[0] =
-						CVI_EFUSE_IsLocked(area_idx);
-					NOTICE("CVI_EFUSE_IsLocked %d\n",
-					       read_buf[0]);
-				}
-				break;
-			}
-		}
-	}
-}
-#endif // USB_RW_EFUSE
-
-static void bulkOutCmplMain(struct usb_ep *ep, struct usb_request *req)
+static void bulk_out_cmpl_main(struct usb_ep *ep, struct usb_request *req)
 {
 	struct usb_gadget *gadget = drv_obj.gadget;
-	uint64_t dest_addr = 0x0;
-	uint32_t i = 0;
-	uint16_t crc = 0;
+	u64 dest_addr = 0x0;
+	u32 i = 0;
+	u16 crc = 0;
 	struct usb_msg *msg = (struct usb_msg *)req->buf;
 	struct usb_msg_s2d *msg_s2d = (struct usb_msg_s2d *)req->buf;
 	struct usb_msg_d2s *msg_d2s = (struct usb_msg_d2s *)req->buf;
-	uint32_t length =
-		((uint32_t)msg->header.len_hi << 8) | msg->header.len_low;
+	u32 length =
+		((u32)msg->header.len_hi << 8) | msg->header.len_low;
 	func *jump_fun;
 #if USB_RW_EFUSE // Mark_to_do
-	uint8_t read_buf[128];
-	uint8_t ack_result[16];
-	uint32_t sn_hi, sn_lo;
+	u8 read_buf[128];
+	u8 ack_result[16];
+	u32 sn_hi, sn_lo;
 #endif // USB_RW_EFUSE
 #ifdef CONFIG_NAND_SUPPORT
 	char cmd[255] = { '\0' };
-	static char prevExtra[EXTRA_FLAG_SIZE + 1] = { '\0' };
+	static char prev_extra[EXTRA_FLAG_SIZE + 1] = { '\0' };
 #endif
 
 	if (req->status == -ESHUTDOWN)
 		return;
 
-	dest_addr = ((uint64_t)(msg->header.addr4) << 32) |
-		    ((uint64_t)(msg->header.addr3) << 24) |
-		    ((uint64_t)(msg->header.addr2) << 16) |
-		    ((uint64_t)(msg->header.addr1) << 8) |
-		    ((uint64_t)(msg->header.addr0));
+	dest_addr = ((u64)(msg->header.addr4) << 32) |
+		    ((u64)(msg->header.addr3) << 24) |
+		    ((u64)(msg->header.addr2) << 16) |
+		    ((u64)(msg->header.addr1) << 8) |
+		    ((u64)(msg->header.addr0));
 
 	if (length == 0 && dest_addr == 0) {
 		VERBOSE("buffer zero\n");
@@ -710,61 +484,55 @@ static void bulkOutCmplMain(struct usb_ep *ep, struct usb_request *req)
 	switch (msg->header.token) {
 	case CVI_USB_INFO:
 		/* INFO("CVI_USB_INFO\n"); */
-		sendInReq(length, CVI_USB_INFO, bulkResetOutReq, NULL, 0);
+		send_in_req(length, CVI_USB_INFO, bulk_reset_out_req, NULL, 0);
 		return;
 	case CVI_USB_S2D:
 		/* INFO("CVI_USB_S2D, addr = 0x%lx, len = 0x%lx\n",dest_addr, msg_s2d->size); */
-		sendInReq(length, CVI_USB_S2D, bulkCmplEmpty, NULL, 0);
+		send_in_req(length, CVI_USB_S2D, bulk_cmpl_empty, NULL, 0);
 
 		// if (dest_addr >= GLOBAL_MEM_START_ADDR)
 		{
-			resetOutReqS2D(dest_addr, msg_s2d->size, bulkResetOutReq);
+			reset_out_req_s2d(dest_addr, msg_s2d->size, bulk_reset_out_req);
 
 #ifdef CONFIG_NAND_SUPPORT
 			// Erase partition first
 			if (!strncmp((char *)((uintptr_t)HEADER_ADDR), "CIMG", 4)) {
-				strlcpy(prevExtra,
+				strlcpy(prev_extra,
 					(char *)((uintptr_t)HEADER_ADDR + 20),
 					EXTRA_FLAG_SIZE);
-				snprintf(cmd, 255, "nand erase.part -y %s", prevExtra);
+				snprintf(cmd, 255, "nand erase.part -y %s", prev_extra);
 				pr_debug("%s\n", cmd);
 				run_command(cmd, 0);
 			}
 #endif
 		}
-		// else
-		// 	sramOutReqS2D(dest_addr, msg_s2d->size);
 		return;
-	case CVI_USB_D2S:
-		{
+	case CVI_USB_D2S: {
 			/* INFO("CVI_USB_D2S\n"); */
 
-			if (dest_addr)
-				sendInReqD2S(dest_addr, msg_d2s->size, bulkResetOutReq);
-			else
-			{
+			if (dest_addr) {
+				send_in_req_d2s(dest_addr, msg_d2s->size, bulk_reset_out_req);
+			} else {
 				unsigned char sendbuf[8];
+				u64 image_addr = CVIMMAP_ION_ADDR;
 
-				uint64_t image_addr = CVIMMAP_ION_ADDR;
-				for (int i=0; i<sizeof(sendbuf); i++)
-				{
+				for (int i = 0; i < sizeof(sendbuf); i++) {
 					sendbuf[i] = (image_addr & 0xff);
 					image_addr >>= 8;
 				}
 
-				sendInReqD2S((uint64_t)sendbuf, sizeof(sendbuf), bulkResetOutReq);
+				send_in_req_d2s((u64)sendbuf, sizeof(sendbuf), bulk_reset_out_req);
 			}
-
 			return;
 		}
 	case CVI_USB_NONE:
 		// INFO("CVI_USB_NONE, addr = 0x%llx, len = 0x%x\n", dest_addr, length);
-		memcpy((void *)dest_addr, cmdBuf + HEADER_SIZE,
+		memcpy((void *)dest_addr, cmd_buf + HEADER_SIZE,
 		       length - HEADER_SIZE);
 #ifdef CONFIG_HW_WATCHDOG
 		WATCHDOG_RESET();
 #endif
-		sendInReq(length, CVI_USB_NONE, bulkResetOutReq, NULL, 0);
+		send_in_req(length, CVI_USB_NONE, bulk_reset_out_req, NULL, 0);
 		return;
 	case CVI_USB_JUMP:
 		jump_fun = (func *)dest_addr;
@@ -779,7 +547,7 @@ static void bulkOutCmplMain(struct usb_ep *ep, struct usb_request *req)
 	case CVI_USB_PROGRAM:
 		/* INFO("CVI_USB_PROGRAM\n"); */
 		_prgImage((void *)UPDATE_ADDR, 0x40, NULL);
-		sendInReq(length, CVI_USB_PROGRAM, bulkResetOutReq, NULL, 0);
+		send_in_req(length, CVI_USB_PROGRAM, bulk_reset_out_req, NULL, 0);
 		NOTICE("CVI_USB_PROGRAM done\n");
 		return;
 	case CVI_USB_RESET_ARM:
@@ -791,51 +559,49 @@ static void bulkOutCmplMain(struct usb_ep *ep, struct usb_request *req)
 		break;
 	case CVI_USB_KEEP_DL:
 		NOTICE("CVI_USB_KEEP_DL\n");
-		crc = crc16_ccitt(0, cmdBuf, length);
+		crc = crc16_ccitt(0, cmd_buf, length);
 		if (crc == 0xB353) {
-			flagEnterDL = 1;
-			NOTICE("flagEnterDL %d\n", flagEnterDL);
+			flag_enter_dL = 1;
+			NOTICE("flag_enter_dL %d\n", flag_enter_dL);
 		} else {
-			flagEnterDL = 0;
+			flag_enter_dL = 0;
 			NOTICE("MAGIC NUM NOT MATCH\n");
-			NOTICE("flagEnterDL %d\n", flagEnterDL);
+			NOTICE("flag_enter_dL %d\n", flag_enter_dL);
 		}
 		break;
 	case CVI_USB_PRG_CMD:
 		NOTICE("CVI_USB_PRG_CMD\n");
 		for (i = 0; i < ARRAY_SIZE(_allow_cmds); i++) {
-			if (strncmp((void *)((uintptr_t)cmdBuf +
+			if (strncmp((void *)((uintptr_t)cmd_buf +
 						  (uintptr_t)HEADER_SIZE),
 					 _allow_cmds[i],
 					 strlen(_allow_cmds[i])) == 0) {
 				char cmd[255] = { '\0' };
 
-				strncpy(cmd,
-					(void *)((uintptr_t)cmdBuf +
+				strlcpy(cmd,
+					(void *)((uintptr_t)cmd_buf +
 						 (uintptr_t)HEADER_SIZE),
-					min(length - HEADER_SIZE,
-					    (uint32_t)254));
+					min(length + 1 - HEADER_SIZE,
+					    (u32)254));
 				NOTICE("run command: %s\n", cmd);
 				run_command(cmd, 0);
 				break;
 			}
 		}
-		sendInReq(length, CVI_USB_PRG_CMD, bulkResetOutReq, NULL, 0);
+		send_in_req(length, CVI_USB_PRG_CMD, bulk_reset_out_req, NULL, 0);
 		break;
 
 #if USB_RW_EFUSE // Mark_to_do
 	case CVI_USB_EFUSEW:
 		NOTICE("CVI_USB_EFUSEW_CMD\n");
 		efusew_cmd(length, ack_result, sizeof(ack_result));
-		sendInReq(length, CVI_USB_EFUSEW, bulkResetOutReq, ack_result,
-			  sizeof(ack_result));
+		send_in_req(length, CVI_USB_EFUSEW, bulk_reset_out_req, ack_result, sizeof(ack_result));
 		break;
 
 	case CVI_USB_EFUSER:
 		NOTICE("CVI_USB_EFUSER\n");
 		efuser_cmd(length, read_buf, sizeof(read_buf));
-		sendInReq(length, CVI_USB_EFUSER, bulkResetOutReq, read_buf,
-			  40);
+		send_in_req(length, CVI_USB_EFUSER, bulk_reset_out_req, read_buf, 40);
 		break;
 
 	case CVI_USB_READ_SN:
@@ -854,8 +620,7 @@ static void bulkOutCmplMain(struct usb_ep *ep, struct usb_request *req)
 		ack_result[6] = (sn_lo >> 8) & 0xFF;
 		ack_result[7] = (sn_lo >> 0) & 0xFF;
 		NOTICE("0x%x%x\n", sn_hi, sn_lo);
-		sendInReq(length, CVI_USB_READ_SN, bulkResetOutReq, ack_result,
-			  sizeof(ack_result));
+		send_in_req(length, CVI_USB_READ_SN, bulk_reset_out_req, ack_result, sizeof(ack_result));
 		break;
 #endif // USB_RW_EFUSE
 	case CVI_USB_REBOOT:
@@ -891,12 +656,12 @@ static void acm_complete_set_line_coding(struct usb_ep *ep,
 	VERBOSE("acm data transfer complete\n");
 }
 
-static void print_ep0_buf(uint32_t length)
+static void print_ep0_buf(u32 length)
 {
 	int i;
 
 	for (i = 0; i < length; i++)
-		VERBOSE("%02X ", ep0Buff[i]);
+		VERBOSE("%02X ", ep0_buff[i]);
 	VERBOSE(" %c\n", ' ');
 }
 
@@ -922,52 +687,52 @@ static int setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 {
 	/* get device reference */
 	int length = 0;
-	uint16_t status_value[2];
-	struct CH9_UsbDeviceDescriptor *devDesc;
-	struct usb_endpoint_descriptor *endpointEpInDesc, *endpointEpOutDesc,
-		*endpointEpInDesc2;
-	struct usb_ctrlrequest TmpCtrl;
+	u16 status_value[2];
+	struct CH9_USBDEVICEDESCRIPTOR *dev_desc;
+	struct usb_endpoint_descriptor *endpoint_epin_desc, *endpoint_epout_desc,
+		*endpoint_epin_desc2;
+	struct usb_ctrlrequest tmpctrl;
 
 	*(status_value + 0) = 0;
 	*(status_value + 1) = 0;
 
-	TmpCtrl.bRequest = ctrl->bRequest;
-	TmpCtrl.bRequestType = ctrl->bRequestType;
-	TmpCtrl.wIndex = le16ToCpu(ctrl->wIndex);
-	TmpCtrl.wLength = le16ToCpu(ctrl->wLength);
-	TmpCtrl.wValue = le16ToCpu(ctrl->wValue);
+	tmpctrl.bRequest = ctrl->bRequest;
+	tmpctrl.bRequestType = ctrl->bRequestType;
+	tmpctrl.wIndex = cvi_le16_to_cpu(ctrl->wIndex);
+	tmpctrl.wLength = cvi_le16_to_cpu(ctrl->wLength);
+	tmpctrl.wValue = cvi_le16_to_cpu(ctrl->wValue);
 
 	VERBOSE("Speed: %d\n", gadget->speed);
-	VERBOSE("bRequest: %02X\n", TmpCtrl.bRequest);
-	VERBOSE("bRequestType: %02X\n", TmpCtrl.bRequestType);
-	VERBOSE("wIndex: %04X\n", TmpCtrl.wIndex);
-	VERBOSE("wValue: %04X\n", TmpCtrl.wValue);
-	VERBOSE("wLength: %04X\n", TmpCtrl.wLength);
+	VERBOSE("bRequest: %02X\n", tmpctrl.bRequest);
+	VERBOSE("bRequestType: %02X\n", tmpctrl.bRequestType);
+	VERBOSE("wIndex: %04X\n", tmpctrl.wIndex);
+	VERBOSE("wValue: %04X\n", tmpctrl.wValue);
+	VERBOSE("wLength: %04X\n", tmpctrl.wLength);
 
-	ep0Req->buf = ep0Buff;
-	ep0Req->dma = (uintptr_t)ep0Buff;
-	ep0Req->complete = reqComplete;
+	ep0_req->buf = ep0_buff;
+	ep0_req->dma = (uintptr_t)ep0_buff;
+	ep0_req->complete = req_complete;
 
 	switch (gadget->speed) {
 	case CH9_USB_SPEED_FULL:
-		endpointEpInDesc = &acm_fs_in_desc;
-		endpointEpOutDesc = &acm_fs_out_desc;
-		endpointEpInDesc2 = &acm_fs_notify_desc;
-		devDesc = &devHsDesc;
+		endpoint_epin_desc = &acm_fs_in_desc;
+		endpoint_epout_desc = &acm_fs_out_desc;
+		endpoint_epin_desc2 = &acm_fs_notify_desc;
+		dev_desc = &dev_hs_desc;
 		break;
 
 	case CH9_USB_SPEED_HIGH:
-		endpointEpInDesc = &acm_hs_in_desc;
-		endpointEpOutDesc = &acm_hs_out_desc;
-		endpointEpInDesc2 = &acm_fs_notify_desc;
-		devDesc = &devHsDesc;
+		endpoint_epin_desc = &acm_hs_in_desc;
+		endpoint_epout_desc = &acm_hs_out_desc;
+		endpoint_epin_desc2 = &acm_fs_notify_desc;
+		dev_desc = &dev_hs_desc;
 		break;
 
 	case CH9_USB_SPEED_SUPER:
-		endpointEpInDesc = &acm_ss_ep_in;
-		endpointEpOutDesc = &acm_ss_ep_out;
-		endpointEpInDesc2 = &acm_fs_notify_desc;
-		devDesc = &devHsDesc;
+		endpoint_epin_desc = &acm_ss_ep_in;
+		endpoint_epout_desc = &acm_ss_ep_out;
+		endpoint_epin_desc2 = &acm_fs_notify_desc;
+		dev_desc = &dev_hs_desc;
 		break;
 
 	default:
@@ -978,132 +743,122 @@ static int setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 	switch (ctrl->bRequestType & CH9_USB_REQ_TYPE_MASK) {
 	case CH9_USB_REQ_TYPE_STANDARD:
 
-		switch (TmpCtrl.bRequest) {
+		switch (tmpctrl.bRequest) {
 		case CH9_USB_REQ_GET_DESCRIPTOR:
 			VERBOSE("GET DESCRIPTOR %c\n", ' ');
-			if ((TmpCtrl.bRequestType & CH9_REQ_RECIPIENT_MASK) ==
+			if ((tmpctrl.bRequestType & CH9_REQ_RECIPIENT_MASK) ==
 			    CH9_USB_REQ_RECIPIENT_INTERFACE) {
-				switch (TmpCtrl.wValue >> 8) {
+				switch (tmpctrl.wValue >> 8) {
 				default:
 					return -1;
 				}
-			} else if ((TmpCtrl.bRequestType &
+			} else if ((tmpctrl.bRequestType &
 				    CH9_REQ_RECIPIENT_MASK) ==
 				   CH9_USB_REQ_RECIPIENT_DEVICE) {
-				switch (TmpCtrl.wValue >> 8) {
+				switch (tmpctrl.wValue >> 8) {
 				case CH9_USB_DT_DEVICE:
 					length = CH9_USB_DS_DEVICE;
 					if (cvi_usb_vid != 0) {
 						NOTICE("Patch VID %x\n",
 						       cvi_usb_vid);
-						devDesc->idVendor =
-							cpuToLe16(cvi_usb_vid);
+						dev_desc->idVendor =
+							cvi_cpu_to_le32(cvi_usb_vid);
 					}
 					if (cvi_usb_pid != 0) {
 						NOTICE("Patch PID %x\n",
 						       cvi_usb_pid);
-						devDesc->idProduct =
-							cpuToLe16(cvi_usb_pid);
+						dev_desc->idProduct =
+							cvi_cpu_to_le32(cvi_usb_pid);
 					}
-					memmove(ep0Buff, devDesc, 18);
+					memmove(ep0_buff, dev_desc, 18);
 					VERBOSE("DevDesc[0] = %d\n",
-						devDesc->bLength);
+						dev_desc->bLength);
 					print_ep0_buf(length);
 					break;
 
 				case CH9_USB_DT_CONFIGURATION: {
-					uint8_t *ptr =
-						&ep0Buff[CH9_USB_DS_CONFIGURATION];
-					uint16_t acmDescLen =
-						(uint16_t)getDescAcm(
-							gadget->speed, ptr);
-
-					length = le16ToCpu(
-						acmDescLen +
+					u8 *ptr =
+						&ep0_buff[CH9_USB_DS_CONFIGURATION];
+					u16 acm_desc_len =
+						(u16)get_desc_acm(gadget->speed, ptr);
+					length = cvi_le16_to_cpu(acm_desc_len +
 						CH9_USB_DS_CONFIGURATION);
-					ConfDesc.wTotalLength =
-						cpuToLe16(length);
-					memmove(ep0Buff, &ConfDesc,
+					conf_desc.wTotalLength =
+						cvi_cpu_to_le32(length);
+					memmove(ep0_buff, &conf_desc,
 						CH9_USB_DS_CONFIGURATION);
 					print_ep0_buf(length);
 					break;
 				}
 
 				case CH9_USB_DT_STRING: {
-					uint8_t descIndex =
-						(uint8_t)(TmpCtrl.wValue &
-							  0xFF);
-					char *strDesc;
+					char *str_desc;
+					u8 desc_index =	(u8)(tmpctrl.wValue & 0xFF);
 
 					VERBOSE("StringDesc %c\n", ' ');
-					switch (descIndex) {
+					switch (desc_index) {
 					case 0:
-						strDesc = (char *)&languageDesc;
-						length = strDesc[0];
+						str_desc = (char *)&language_desc;
+						length = str_desc[0];
 						VERBOSE("language %c\n", ' ');
 						break;
 
 					case 1:
-						strDesc = (char *)&vendorDesc;
-						length = strDesc[0];
+						str_desc = (char *)&vendor_desc;
+						length = str_desc[0];
 						VERBOSE("vendor %c\n", ' ');
 						break;
 
 					case 2:
-						strDesc = (char *)&productDesc;
-						length = strDesc[0];
+						str_desc = (char *)&product_desc;
+						length = str_desc[0];
 						VERBOSE("product %c\n", ' ');
 						break;
 
 					case 3:
-						strDesc = (char *)&serialDesc;
-						length = strDesc[0];
+						str_desc = (char *)&serial_desc;
+						length = str_desc[0];
 						VERBOSE("serial %c\n", ' ');
 						break;
 
 					default:
 						return -1;
 					}
-					memmove(ep0Buff, strDesc, length);
+					memmove(ep0_buff, str_desc, length);
 					break;
 				}
 
 				case CH9_USB_DT_BOS: {
 					int offset = 0;
 
-					length =
-						le16ToCpu(bosDesc.wTotalLength);
-
-					memmove(ep0Buff, &bosDesc,
+					length = cvi_le16_to_cpu(bos_desc.wTotalLength);
+					memmove(ep0_buff, &bos_desc,
 						CH9_USB_DS_BOS);
 					offset += CH9_USB_DS_BOS;
-					memmove(&ep0Buff[offset],
-						&capabilityExtDesc,
+					memmove(&ep0_buff[offset],
+						&capability_ext_desc,
 						CH9_USB_DS_DEVICE_CAPABILITY_20);
 				}
 					print_ep0_buf(length);
-					VERBOSE("BosDesc %c\n", ' ');
+					VERBOSE("bos_desc %c\n", ' ');
 					break;
 
 				case CH9_USB_DT_DEVICE_QUALIFIER:
 					length = CH9_USB_DS_DEVICE_QUALIFIER;
-					memmove(ep0Buff, &qualifierDesc,
-						length);
+					memmove(ep0_buff, &qualifier_desc, length);
 					break;
 
 				case CH9_USB_DT_OTHER_SPEED_CONFIGURATION: {
-					uint8_t *ptr =
-						&ep0Buff[CH9_USB_DS_CONFIGURATION];
-					uint16_t acmDescLen =
-						(uint16_t)getDescAcm(
-							gadget->speed, ptr);
+					u8 *ptr =
+						&ep0_buff[CH9_USB_DS_CONFIGURATION];
+					u16 acm_desc_len =
+						(u16)get_desc_acm(gadget->speed, ptr);
 
-					length = le16ToCpu(
-						acmDescLen +
+					length = cvi_le16_to_cpu(acm_desc_len +
 						CH9_USB_DS_CONFIGURATION);
-					ConfDesc.wTotalLength =
-						cpuToLe16(length);
-					memmove(ep0Buff, &ConfDesc,
+					conf_desc.wTotalLength =
+						cvi_cpu_to_le32(length);
+					memmove(ep0_buff, &conf_desc,
 						CH9_USB_DS_CONFIGURATION);
 					print_ep0_buf(length);
 					break;
@@ -1120,12 +875,12 @@ static int setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			struct usb_ep *ep;
 
 			VERBOSE("SET CONFIGURATION(%d)\n",
-				le16ToCpu(TmpCtrl.wValue));
-			if (TmpCtrl.wValue > 1)
+				cvi_le16_to_cpu(tmpctrl.wValue));
+			if (tmpctrl.wValue > 1)
 				return -1; /* no such configuration */
 			/* unconfigure device */
-			if (TmpCtrl.wValue == 0) {
-				configValue = 0;
+			if (tmpctrl.wValue == 0) {
+				config_value = 0;
 				gadget_for_each_ep(ep, gadget) {
 					if (ep->name)
 						ep->ops->disable(ep);
@@ -1134,16 +889,16 @@ static int setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			}
 
 			/* device already configured */
-			if (configValue == 1 && TmpCtrl.wValue == 1)
+			if (config_value == 1 && tmpctrl.wValue == 1)
 				return 0;
 
 			/* configure device */
-			configValue = (uint8_t)TmpCtrl.wValue;
+			config_value = (u8)tmpctrl.wValue;
 
 			gadget_for_each_ep(ep, gadget) {
 				if (ep->name &&
 				    (!strcmp(ep->name, USB_TTY_EP_IN_BULK))) {
-					ep->ops->enable(ep, endpointEpInDesc);
+					ep->ops->enable(ep, endpoint_epin_desc);
 					VERBOSE("enable EP IN\n");
 					break;
 				}
@@ -1151,7 +906,7 @@ static int setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			gadget_for_each_ep(ep, gadget) {
 				if ((ep->name &&
 				     !strcmp(ep->name, USB_TTY_EP_OUT_BULK))) {
-					ep->ops->enable(ep, endpointEpOutDesc);
+					ep->ops->enable(ep, endpoint_epout_desc);
 					VERBOSE("enable EP OUT\n");
 					break;
 				}
@@ -1159,29 +914,27 @@ static int setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			gadget_for_each_ep(ep, gadget) {
 				if ((ep->name &&
 				     !strcmp(ep->name, USB_TTY_EP_IN_INTERRUPT))) {
-					ep->ops->enable(ep, endpointEpInDesc2);
+					ep->ops->enable(ep, endpoint_epin_desc2);
 					break;
 					VERBOSE("enable EP Notify\n");
 				}
 			}
 
 			/*Code control  Self powered feature of USB*/
-			if (ConfDesc.bmAttributes &
+			if (conf_desc.bmAttributes &
 			    CH9_USB_CONFIG_SELF_POWERED) {
-				if (gadget->ops->set_selfpowered) {
+				if (gadget->ops->set_selfpowered)
 					gadget->ops->set_selfpowered(gadget, 1);
-				}
 			} else {
-				if (gadget->ops->set_selfpowered) {
+				if (gadget->ops->set_selfpowered)
 					gadget->ops->set_selfpowered(gadget, 0);
-				}
 			}
 		}
 			return 0;
 
 		case CH9_USB_REQ_GET_CONFIGURATION:
 			length = 1;
-			memmove(ep0Buff, &configValue, length);
+			memmove(ep0_buff, &config_value, length);
 			/* VERBOSE("CH9_USB_REQ_GET_CONFIGURATION %c\n", ' '); */
 			break;
 
@@ -1192,22 +945,22 @@ static int setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 
 	case CH9_USB_REQ_TYPE_CLASS: {
 		/* SET_LINE_CODING ... just read and save what the host sends */
-		switch (TmpCtrl.bRequest) {
+		switch (tmpctrl.bRequest) {
 		case USB_CDC_REQ_SET_LINE_CODING:
-			length = TmpCtrl.wLength;
-			ep0Req->complete = acm_complete_set_line_coding;
+			length = tmpctrl.wLength;
+			ep0_req->complete = acm_complete_set_line_coding;
 			VERBOSE("USB_CDC_REQ_SET_LINE_CODING %d\n", length);
 			set_acm_config(1);
 			break;
 		case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
-			acm->port_handshake_bits = TmpCtrl.wValue;
+			acm->port_handshake_bits = tmpctrl.wValue;
 			set_acm_config(1);
 			VERBOSE("USB_CDC_REQ_SET_CONTROL_LINE_STATE %c\n", ' ');
 			break;
 		case USB_CDC_REQ_GET_LINE_CODING:
-			length = TmpCtrl.wLength;
-			memmove(ep0Buff, &acm->port_line_coding, length);
-			/* ep0Req->complete = acm_complete_get_line_coding; */
+			length = tmpctrl.wLength;
+			memmove(ep0_buff, &acm->port_line_coding, length);
+			/* ep0_req->complete = acm_complete_get_line_coding; */
 			VERBOSE("USB_CDC_REQ_GET_LINE_CODING %d\n", length);
 			set_acm_config(1);
 			break;
@@ -1217,11 +970,11 @@ static int setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 	}
 
 	if (length > 0) {
-		ep0Req->length =
-			TmpCtrl.wLength < length ? TmpCtrl.wLength : length;
+		ep0_req->length =
+			tmpctrl.wLength < length ? tmpctrl.wLength : length;
 
-		cvi_cache_flush(ep0Req->dma, ep0Req->length);
-		gadget->ep0->ops->queue(gadget->ep0, ep0Req, 0);
+		cvi_cache_flush(ep0_req->dma, ep0_req->length);
+		gadget->ep0->ops->queue(gadget->ep0, ep0_req, 0);
 	}
 	return 0;
 }
@@ -1261,29 +1014,29 @@ int acm_app_init(void)
 	struct usb_ep *ep0 = drv_obj.gadget->ep0;
 
 	/*  set unicode strings */
-	get_unicode_string(vendorDesc, USB_MANUFACTURER_STRING);
-	get_unicode_string(productDesc, USB_PRODUCT_STRING);
-	get_unicode_string(serialDesc, USB_SERIAL_NUMBER_STRING);
+	get_unicode_string(vendor_desc, USB_MANUFACTURER_STRING);
+	get_unicode_string(product_desc, USB_PRODUCT_STRING);
+	get_unicode_string(serial_desc, USB_SERIAL_NUMBER_STRING);
 
 	/*  align buffers to modulo8 address */
-	ep0Buff = ep0BuffAlloc;
-	bulkBuf = bulkBufAlloc;
-	cmdBuf = cmdBufAlloc;
+	ep0_buff = ep0_buff_alloc;
+	bulk_buf = bulk_buf_alloc;
+	cmd_buf = cmd_buf_alloc;
 
-	memset(ep0BuffAlloc, 0x00, EP0_SIZE);
-	memset(bulkBufAlloc, 0x00, BUF_SIZE);
-	memset(cmdBufAlloc, 0x00, BUF_SIZE);
+	memset(ep0_buff_alloc, 0x00, EP0_SIZE);
+	memset(bulk_buf_alloc, 0x00, BUF_SIZE);
+	memset(cmd_buf_alloc, 0x00, BUF_SIZE);
 
 	/* allocate request for ep0 */
-	ep0Req = ep0->ops->alloc_request(ep0, 0);
+	ep0_req = ep0->ops->alloc_request(ep0, 0);
 
 	/* Change descriptor for maxSpeed == HS only Device*/
 	/* For USB2.0 we have to modified wTotalLength of BOS descriptor*/
 	if (drv_obj.gadget->max_speed < USB_SPEED_SUPER) {
-		bosDesc.wTotalLength = cpuToLe16(
-			CH9_USB_DS_BOS + CH9_USB_DS_DEVICE_CAPABILITY_20);
-		bosDesc.bNumDeviceCaps = 1;
-		devHsDesc.bcdUSB = cpuToLe16(BCD_USB_HS_ONLY);
+		bos_desc.wTotalLength = cvi_cpu_to_le32(CH9_USB_DS_BOS
+			+ CH9_USB_DS_DEVICE_CAPABILITY_20);
+		bos_desc.bNumDeviceCaps = 1;
+		dev_hs_desc.bcdUSB = cvi_cpu_to_le32(BCD_USB_HS_ONLY);
 	}
 
 	/* acm init */
@@ -1298,10 +1051,10 @@ int acm_app_init(void)
 }
 
 #ifdef BUILD_ATF
-uint8_t usb_phy_det_connection(void)
+u8 usb_phy_det_connection(void)
 {
-	uint8_t phy_det_connected = 0;
-	uint32_t cvi_usb_phy_config = 0;
+	u8 phy_det_connected = 0;
+	u32 cvi_usb_phy_config = 0;
 
 	cvi_usb_phy_config = plat_cvi_gpio_read(BIT_MASK_GPIO_USB_PHY_DET_OFF);
 	if (cvi_usb_phy_config == 0) {
@@ -1319,7 +1072,7 @@ uint8_t usb_phy_det_connection(void)
 #endif
 
 #ifndef BUILD_ATF
-uint32_t plat_cvi_gpio_read(uint32_t mask)
+u32 plat_cvi_gpio_read(u32 mask)
 {
 	NOTICE("Overwrite fip_src to FIP_SRC_USB\n");
 	return FIP_SRC_USB;
@@ -1327,9 +1080,10 @@ uint32_t plat_cvi_gpio_read(uint32_t mask)
 #endif
 
 #if defined(USB_PHY_DETECTION)
-uint8_t usb_vbus_det(void)
+u8 usb_vbus_det(void)
 {
-	return ((mmio_read_32(REG_USB_SYS_REG_0114) & reg_phy0_OTGSESSVLD0_Msk) >> reg_phy0_OTGSESSVLD0_Pos);
+	return ((mmio_read_32(REG_USB_SYS_REG_0114)
+		& REG_PHY0_OTGSESSVLD0_MSK) >> REG_PHY0_OTGSESSVLD0_POS);
 }
 #endif
 
@@ -1343,13 +1097,13 @@ void acm_patch_id(unsigned short vid, unsigned short pid)
 int acm_app(void)
 {
 	struct usb_gadget *gadget;
-	uint32_t res = 0; /* keeps result of operation on driver */
+	u32 res = 0; /* keeps result of operation on driver */
 	struct usb_ep *ep;
 	int fip_src = FIP_SRC_MEMMAP;
-	uint32_t ts = 0;
+	u32 ts = 0;
 
 #ifdef BUILD_ATF
-	uint8_t phy_det_connected = 0;
+	u8 phy_det_connected = 0;
 
 	phy_det_connected = usb_phy_det_connection();
 
@@ -1361,7 +1115,7 @@ int acm_app(void)
 
 #if defined(USB_PHY_DETECTION)
 	{
-		uint32_t cnt = 50;
+		u32 cnt = 50;
 
 		INFO("waiting for connection ...\n");
 		/* debounce */
@@ -1380,9 +1134,9 @@ int acm_app(void)
 	fip_src = plat_cvi_gpio_read(0);
 	NOTICE("fip_src %d\n", fip_src);
 	if (fip_src == FIP_SRC_USB)
-		flagEnterDL = 1;
+		flag_enter_dL = 1;
 	else
-		flagEnterDL = 0;
+		flag_enter_dL = 0;
 
 #ifdef USB_IRQ_MODE
 	request_irq(USB_DEV_INTR0, AcmIsr, 0, NULL, NULL);
@@ -1396,9 +1150,8 @@ int acm_app(void)
 
 	dwc3_uboot_init(&cvi_dwc3_dev);
 
-	if (res != 0) {
+	if (res != 0)
 		goto error;
-	}
 
 	/* bind the gadget object here. */
 	if (usb_gadget_register_driver(&g_driver) < 0) {
@@ -1423,7 +1176,7 @@ unconfigured:
 #ifndef USB_IRQ_MODE
 		AcmIsr();
 #endif
-		if (get_timer(ts) > 1000 && flagEnterDL == 0) {
+		if (get_timer(ts) > 1000 && flag_enter_dL == 0) {
 			NOTICE("Enumeration failed\n");
 			acm_mem_release();
 			dwc3_uboot_exit(0);
@@ -1435,14 +1188,14 @@ unconfigured:
 	mem_alloc_cnt = 1;
 	gadget_for_each_ep(ep, gadget) {
 		if (!strcmp(ep->name, "ep1out-bulk")) {
-			bulkOutReq = ep->ops->alloc_request(ep, 0);
-			epOut = ep;
+			bulk_out_req = ep->ops->alloc_request(ep, 0);
+			epout = ep;
 		} else if (!strcmp(ep->name, "ep1in-bulk")) {
-			bulkInReq = ep->ops->alloc_request(ep, 0);
-			epIn = ep;
+			bulk_in_req = ep->ops->alloc_request(ep, 0);
+			epin = ep;
 		} else if (!strcmp(ep->name, "ep2in-int")) {
-			IntInReq = ep->ops->alloc_request(ep, 0);
-			epInNotify = ep;
+			int_in_req = ep->ops->alloc_request(ep, 0);
+			epin_notify = ep;
 		}
 	}
 
@@ -1463,13 +1216,13 @@ unconfigured:
 	}
 
 	VERBOSE("OUT DATA TRANSFER size :%d\n", transfer_size);
-	clearReq(bulkOutReq);
-	bulkOutReq->buf = cmdBuf;
-	bulkOutReq->dma = (uintptr_t)cmdBuf;
-	bulkOutReq->complete = bulkOutCmplMain;
-	bulkOutReq->length = transfer_size;
-	cvi_cache_flush(bulkOutReq->dma, bulkOutReq->length);
-	epOut->ops->queue(epOut, bulkOutReq, 0);
+	clear_req(bulk_out_req);
+	bulk_out_req->buf = cmd_buf;
+	bulk_out_req->dma = (uintptr_t)cmd_buf;
+	bulk_out_req->complete = bulk_out_cmpl_main;
+	bulk_out_req->length = transfer_size;
+	cvi_cache_flush(bulk_out_req->dma, bulk_out_req->length);
+	epout->ops->queue(epout, bulk_out_req, 0);
 
 	NOTICE("connection speed: %d\n", gadget->speed);
 	ts = get_timer(0);
@@ -1483,7 +1236,7 @@ unconfigured:
 			goto unconfigured;
 		if (get_config_break())
 			break;
-		if (flagEnterDL == 0) {
+		if (flag_enter_dL == 0) {
 			if (get_timer(ts) > 1000) {
 				NOTICE("wait data timeout\n");
 				break;

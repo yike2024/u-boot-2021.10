@@ -20,7 +20,7 @@ extern u32  top_pll_base;
 //OSD
 #define REG_VO_SYS_OENC_BASE(x) (vo_sys_f_base + 0x6000 + 0x1000*(x))
 
-// ============== ATHENA2 TOP CLKGEN ============== //
+// ============== TOP CLKGEN ============== //
 #define REG_FPLL_CTRL2(x) (top_pll_base + 0x88 + 0x100 * (x))
 #define REG_FPLL_CTRL5(x) (top_pll_base + 0x94 + 0x100 * (x))
 #define REG_MPLL_CTRL1(x) (top_pll_base + 0xc4 + 0x100 * (x))

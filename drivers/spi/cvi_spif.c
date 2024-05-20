@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) Cvitek Co., Ltd. 2019-2021. All rights reserved.
  *
@@ -35,7 +36,7 @@ static int cvitek_spi_probe(struct udevice *bus)
 static unsigned int match_value_for_read(u8 read_cmd)
 {
 	int i;
-	uint32_t val;
+	u32 val;
 
 	for (i = 0; i < sizeof(dmmr_reg_set); i++) {
 		if (read_cmd == dmmr_reg_set[i].read_cmd) {
@@ -50,7 +51,7 @@ static unsigned int match_value_for_read(u8 read_cmd)
 
 static void cvitek_set_sf_clk(unsigned long spi_base, uint32_t sck_div)
 {
-	uint32_t ctrl;
+	u32 ctrl;
 
 	/* disable DMMR */
 	mmio_write_8(spi_base + REG_SPI_DMMR, 0);
@@ -63,12 +64,13 @@ static void cvitek_set_sf_clk(unsigned long spi_base, uint32_t sck_div)
 	if (sck_div >= SPI_CLK_30M) /* if sck <= 30MHz */
 		mmio_write_16(spi_base + REG_SPI_DLY_CTRL, BIT_SPI_DLY_CTRL_CET);
 	else /* if sck > 30MHz */
-		mmio_write_16(spi_base + REG_SPI_DLY_CTRL, BIT_SPI_DLY_CTRL_CET | BIT_SPI_DLY_CTRL_NEG_SAMPLE);
+		mmio_write_16(spi_base + REG_SPI_DLY_CTRL, BIT_SPI_DLY_CTRL_CET |
+				BIT_SPI_DLY_CTRL_NEG_SAMPLE);
 }
 
 static void cvitek_enable_mmap(struct cvitek_spi_priv *priv, u8 read_cmd, u8 dummy_clk)
 {
-	uint32_t val;
+	u32 val;
 
 	/* disable DMMR */
 	mmio_write_32(priv->ctrl_base + REG_SPI_DMMR, 0);
@@ -103,16 +105,16 @@ static void cvitek_disable_mmap(struct cvitek_spi_priv *priv)
 
 static uint8_t cvitek_spi_data_out_tran(struct cvitek_spi_priv *priv, struct spi_flash *flash,
 					unsigned long spi_base, const uint8_t *src_buf,
-					uint32_t data_bytes, unsigned long flags)
+					u32 data_bytes, unsigned long flags)
 {
-	uint32_t tran_csr = 0;
-	uint32_t xfer_size, off;
-	uint32_t wait = 0;
+	u32 tran_csr = 0;
+	u32 xfer_size, off;
+	u32 wait = 0;
 	int i;
 	struct spi_slave *spi = flash->spi;
 
-	debug("cvitek_spi_data_out_tran(): flags 0x%lx, opcode 0x%x, spi->mode 0x%x\n",
-	      flags, flash->program_opcode, spi->mode);
+	debug("%s: flags 0x%lx, opcode 0x%x, spi->mode 0x%x\n",
+	      __func__, flags, flash->program_opcode, spi->mode);
 
 	if (data_bytes > 65535) {
 		printf("data out overflow, should be less than 65535 bytes(%d)\n", data_bytes);
@@ -144,7 +146,7 @@ static uint8_t cvitek_spi_data_out_tran(struct cvitek_spi_priv *priv, struct spi
 	mmio_write_16(spi_base + REG_SPI_TRAN_NUM, data_bytes);
 	tran_csr |= BIT_SPI_TRAN_CSR_GO_BUSY;
 
-	debug("cvitek_spi_data_out_tran tran_csr 0x%x\n", tran_csr);
+	debug("%s 0x%x\n", __func__, tran_csr);
 
 	mmio_write_16(spi_base + REG_SPI_TRAN_CSR, tran_csr);
 
@@ -186,8 +188,10 @@ static uint8_t cvitek_spi_data_out_tran(struct cvitek_spi_priv *priv, struct spi
 	mmio_write_32(spi_base + REG_SPI_FIFO_PT, 0);
 
 	/* clear interrupts */
-	mmio_write_8(spi_base + REG_SPI_INT_STS, mmio_read_8(spi_base + REG_SPI_INT_STS) & ~BIT_SPI_INT_TRAN_DONE);
-	mmio_write_8(spi_base + REG_SPI_INT_STS, mmio_read_8(spi_base + REG_SPI_INT_STS) & ~BIT_SPI_INT_WR_FIFO);
+	mmio_write_8(spi_base + REG_SPI_INT_STS, mmio_read_8(spi_base + REG_SPI_INT_STS) &
+			~BIT_SPI_INT_TRAN_DONE);
+	mmio_write_8(spi_base + REG_SPI_INT_STS, mmio_read_8(spi_base + REG_SPI_INT_STS) &
+			~BIT_SPI_INT_WR_FIFO);
 	return 0;
 }
 
@@ -195,7 +199,7 @@ static int cvitek_spi_data_in_tran(struct cvitek_spi_priv *priv, struct spi_flas
 				   unsigned long spi_base, uint8_t *dst_buf, int data_bytes,
 				   unsigned long flags)
 {
-	uint32_t i, xfer_size, off, tran_csr = 0;
+	u32 i, xfer_size, off, tran_csr = 0;
 
 	/* disable DMMR (offset: 0xC) */
 	mmio_write_32(priv->ctrl_base + REG_SPI_DMMR, 0);
@@ -250,8 +254,10 @@ static int cvitek_spi_data_in_tran(struct cvitek_spi_priv *priv, struct spi_flas
 	mmio_write_8(spi_base + REG_SPI_FIFO_PT, 0);
 
 	/* write 0 to clear interrupts */
-	mmio_write_8(spi_base + REG_SPI_INT_STS, mmio_read_8(spi_base + REG_SPI_INT_STS) & ~BIT_SPI_INT_TRAN_DONE);
-	mmio_write_8(spi_base + REG_SPI_INT_STS, mmio_read_8(spi_base + REG_SPI_INT_STS) & ~BIT_SPI_INT_RD_FIFO);
+	mmio_write_8(spi_base + REG_SPI_INT_STS, mmio_read_8(spi_base + REG_SPI_INT_STS) &
+			~BIT_SPI_INT_TRAN_DONE);
+	mmio_write_8(spi_base + REG_SPI_INT_STS, mmio_read_8(spi_base + REG_SPI_INT_STS) &
+			~BIT_SPI_INT_RD_FIFO);
 
 	return 0;
 }
@@ -360,7 +366,6 @@ static int cvitek_spi_set_speed(struct udevice *bus, uint speed)
 	else
 		priv->sck_div = SPI_CLK_30M;	/* default value, 30MHz */
 
-
 	debug("%s: %d Hz, sck_div: %d\n", __func__, priv->freq, priv->sck_div);
 
 	cvitek_set_sf_clk(priv->ctrl_base, priv->sck_div);
@@ -371,7 +376,7 @@ static int cvitek_spi_set_speed(struct udevice *bus, uint speed)
 static int cvitek_spi_set_mode(struct udevice *bus, uint mode)
 {
 	struct cvitek_spi_priv *priv = dev_get_priv(bus);
-	uint32_t ctrl;
+	u32 ctrl;
 
 	mode = mode & 0x3;
 	if (mode == 1 || mode == 2)
@@ -387,24 +392,8 @@ static int cvitek_spi_set_mode(struct udevice *bus, uint mode)
 	return 0;
 }
 
-#if 0
-static bool cvitek_spi_supports_op(struct spi_slave *slave,
-				 const struct spi_mem_op *op)
-{
-	debug("%s\n", __func__);
-	return true;
-}
-
-static int cvitek_spi_adjust_op_size(struct spi_slave *slave,
-				   struct spi_mem_op *op)
-{
-	debug("%s\n", __func__);
-	return 0;
-}
-#endif
-
 static int cvitek_spi_exec_op(struct spi_slave *slave,
-			    const struct spi_mem_op *op)
+			      const struct spi_mem_op *op)
 {
 	int ret = 0;
 	struct udevice *bus = slave->dev->parent;

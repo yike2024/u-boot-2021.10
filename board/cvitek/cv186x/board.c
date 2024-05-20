@@ -297,13 +297,13 @@ int board_init(void)
 }
 
 #define DTSNAME_MAX_LEN 32
-#ifdef CONFIG_ROOTFS_UBUNTU
-#define DEFAULT_DTSNAME "config-bm1688_wevb_4G"
+#if defined(CONFIG_ROOTFS_UBUNTU) || defined(CONFIG_ROOTFS_DEBIAN)
+#define DEFAULT_DTSNAME "config-cv186ah_wevb_4G"
 #else
 #define DEFAULT_DTSNAME "config-" __stringify(CVICHIP) "_" __stringify(CVIBOARD)
 #endif
 
-static void get_dts_type_from_oem(unsigned char *dtsname)
+void get_dts_type_from_oem(unsigned char *dtsname)
 {
 #ifdef CONFIG_EMMC_SUPPORT
 	if (!dtsname) {
@@ -340,7 +340,7 @@ int setup_sophgo_dts(void)
 	env_set("DTS_TYPE", dtsType);
 	return 0;
 }
-#ifdef CONFIG_ROOTFS_UBUNTU
+#if defined(CONFIG_ROOTFS_UBUNTU) || defined(CONFIG_ROOTFS_DEBIAN)
 #ifdef CONFIG_BOARD_LATE_INIT
 static void get_ether_addr_from_emmc(unsigned char *mac, int i)
 {
@@ -437,11 +437,11 @@ static void cv_system_off(void)
 
 void cv_system_reset(void)
 {
-	mmio_write_32(REG_RTC_BASE + RTC_EN_WARM_RST_REQ, 0x01);
-	while (mmio_read_32(REG_RTC_BASE + RTC_EN_WARM_RST_REQ) != 0x01)
+	mmio_write_32(REG_RTC_BASE + RTC_EN_PWR_CYC_REQ, 0x01);
+	while (mmio_read_32(REG_RTC_BASE + RTC_EN_PWR_CYC_REQ) != 0x01)
 		;
 	mmio_write_32(REG_RTC_CTRL_BASE + RTC_CTRL0_UNLOCKKEY, 0xAB18);
-	mmio_setbits_32(REG_RTC_CTRL_BASE + RTC_CTRL0, 0xFFFF0800 | (0x1 << 4));
+	mmio_setbits_32(REG_RTC_CTRL_BASE + RTC_CTRL0, 0xFFFF0800 | (0x1 << 3));
 
 	while (1)
 		;

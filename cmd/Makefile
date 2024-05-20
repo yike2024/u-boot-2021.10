@@ -110,7 +110,9 @@ obj-$(CONFIG_MP) += mp.o
 obj-$(CONFIG_CMD_MTD) += mtd.o
 obj-$(CONFIG_CMD_MTDPARTS) += mtdparts.o
 obj-$(CONFIG_CMD_CLONE) += clone.o
-obj-$(CONFIG_ROOTFS_UBUNTU) += mmcbcbx.o
+ifeq ($(or $(CONFIG_ROOTFS_UBUNTU), $(CONFIG_ROOTFS_DEBIAN)),y)
+obj-y += mmcbcbx.o
+endif
 obj-$(CONFIG_CMD_BM_SAVELOG) += bm_savelog.o
 ifneq ($(CONFIG_CMD_NAND)$(CONFIG_CMD_SF),)
 obj-y += legacy-mtd-utils.o

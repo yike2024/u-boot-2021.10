@@ -11,10 +11,6 @@
 #include <../../../board/cvitek/cv1835/cv1835_reg.h>
 #elif defined(CONFIG_TARGET_CVITEK_CV1822)
 #include <../../../board/cvitek/cv1822/cv1822_reg.h>
-#elif defined(CONFIG_TARGET_CVITEK_CV181X)
-#include <../../../board/cvitek/cv181x/cv181x_reg.h>
-#elif defined(CONFIG_TARGET_CVITEK_CV180X)
-#include <../../../board/cvitek/cv180x/cv180x_reg.h>
 #elif defined(CONFIG_TARGET_CVITEK_CV186X)
 #include <../../../board/cvitek/cv186x/cv186x_reg.h>
 #else

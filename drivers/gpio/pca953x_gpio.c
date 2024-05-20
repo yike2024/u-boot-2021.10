@@ -289,6 +289,9 @@ static int pca953x_probe(struct udevice *dev)
 
 	driver_data = dev_get_driver_data(dev);
 
+	i2c_set_chip_flags(dev,
+			   DM_I2C_CHIP_RD_ADDRESS | DM_I2C_CHIP_WR_ADDRESS);
+
 	info->gpio_count = driver_data & PCA_GPIO_MASK;
 	if (info->gpio_count > MAX_BANK * BANK_SZ) {
 		dev_err(dev, "Max support %d pins now\n", MAX_BANK * BANK_SZ);

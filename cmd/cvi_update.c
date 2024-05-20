@@ -37,7 +37,7 @@ uint32_t update_magic;
 enum chunk_type_e { dont_care = 0, check_crc };
 enum storage_type_e { sd_dl = 0, usb_dl };
 
-#ifndef CONFIG_ROOTFS_UBUNTU
+#if !defined(CONFIG_ROOTFS_UBUNTU) && !defined(CONFIG_ROOTFS_DEBIAN)
 static int _storage_update(enum storage_type_e type);
 #endif
 int _prgImage(char *file, uint32_t chunk_header_size, char *file_name)
@@ -97,7 +97,7 @@ int _prgImage(char *file, uint32_t chunk_header_size, char *file_name)
 
 	return size;
 }
-#ifndef CONFIG_ROOTFS_UBUNTU
+#if !defined(CONFIG_ROOTFS_UBUNTU) && !defined(CONFIG_ROOTFS_DEBIAN)
 static int _checkHeader(char *file, char strStorage[10])
 {
 	char *magic = (void *)HEADER_ADDR;
@@ -247,7 +247,7 @@ static int _usb_update(uint32_t usb_pid)
 	snprintf(utask_cmd, 255, "cvi_utask vid 0x3346 pid 0x%x", usb_pid);
 	ret = run_command(utask_cmd, 0);
 
-#ifdef CONFIG_ROOTFS_UBUNTU
+#if defined(CONFIG_ROOTFS_UBUNTU) || defined(CONFIG_ROOTFS_DEBIAN)
 	ret = run_command("source ${scriptaddr}", 0);
 	ret = run_command(utask_cmd, 0);
 	return 0;
@@ -297,7 +297,7 @@ static int do_cvi_update(struct cmd_tbl *cmdtp, int flag, int argc,
 		update_magic = readl((unsigned int *)BOOT_SOURCE_FLAG_ADDR);
 		if (update_magic == SD_UPDATE_MAGIC) {
 			run_command("env default -a", 0);
-			#ifdef CONFIG_ROOTFS_UBUNTU
+			#if defined(CONFIG_ROOTFS_UBUNTU) || defined(CONFIG_ROOTFS_DEBIAN)
 			ret = run_command("load ${devtype} ${devnum}:${distro_bootpart} ${scriptaddr} /$ota_path/boot.scr;source ${scriptaddr}", 0);
 			if (ret != 0) {
 				printf("load from no partition sd\n");

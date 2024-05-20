@@ -24,7 +24,7 @@
 
 #ifdef DEBUG
 #define debug(fmt, args...)			\
-	printf("%s,%d"fmt, __func__, __LINE__, ##args)
+	printf("%s, %d" fmt, __func__, __LINE__, ##args)
 #define pr_debug(fmt, ...) \
 	printf(fmt, ##__VA_ARGS__)
 #endif
@@ -53,14 +53,15 @@ static void sdhci_reset(struct sdhci_host *host, u8 mask)
 static void sdhci_cmd_done(struct sdhci_host *host, struct mmc_cmd *cmd)
 {
 	int i;
+
 	if (cmd->resp_type & MMC_RSP_136) {
 		/* CRC is stripped so we need to do some shifting. */
 		for (i = 0; i < 4; i++) {
 			cmd->response[i] = sdhci_readl(host,
-					SDHCI_RESPONSE + (3-i)*4) << 8;
+						       SDHCI_RESPONSE + (3 - i) * 4) << 8;
 			if (i != 3)
 				cmd->response[i] |= sdhci_readb(host,
-						SDHCI_RESPONSE + (3-i)*4-1);
+						SDHCI_RESPONSE + (3 - i) * 4 - 1);
 		}
 	} else {
 		cmd->response[0] = sdhci_readl(host, SDHCI_RESPONSE);
@@ -71,6 +72,7 @@ static void sdhci_transfer_pio(struct sdhci_host *host, struct mmc_data *data)
 {
 	int i;
 	char *offs;
+
 	for (i = 0; i < data->blocksize; i += 4) {
 		offs = data->dest + i;
 		if (data->flags == MMC_DATA_READ)
@@ -184,17 +186,19 @@ static int sdhci_transfer_data(struct sdhci_host *host, struct mmc_data *data)
 				start_addr += SDHCI_DEFAULT_BOUNDARY_SIZE;
 				start_addr = dev_phys_to_bus(mmc_to_dev(host->mmc),
 							     start_addr);
-				if (sdhci_readw(host, SDHCI_HOST_CONTROL2) & SDHCI_HOST_VER4_ENABLE) {
+				if (sdhci_readw(host, SDHCI_HOST_CONTROL2)
+				    & SDHCI_HOST_VER4_ENABLE) {
 					sdhci_writel(host, start_addr, SDHCI_ADMA_ADDRESS);
-					sdhci_writel(host, (start_addr >> 32), SDHCI_ADMA_ADDRESS_HI);
+					sdhci_writel(host, (start_addr >> 32),
+						     SDHCI_ADMA_ADDRESS_HI);
 				} else {
 					sdhci_writel(host, start_addr, SDHCI_DMA_ADDRESS);
 				}
 			}
 		}
-		if (timeout-- > 0)
+		if (timeout-- > 0) {
 			udelay(10);
-		else {
+		} else {
 			printf("%s: Transfer data timeout\n", __func__);
 			return -ETIMEDOUT;
 		}
@@ -207,6 +211,7 @@ static int sdhci_transfer_data(struct sdhci_host *host, struct mmc_data *data)
 
 	return 0;
 }
+
 /*
  * No command will be sent by driver if card is busy, so driver must wait
  * for card ready state.
@@ -250,8 +255,10 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
 
 	mask = SDHCI_CMD_INHIBIT | SDHCI_DATA_INHIBIT;
 
-	/* We shouldn't wait for data inihibit for stop commands, even
-	   though they might use busy signaling */
+	/*
+	 * We shouldn't wait for data inihibit for stop commands, even
+	 * though they might use busy signaling
+	 */
 	if (cmd->cmdidx == MMC_CMD_STOP_TRANSMISSION ||
 	    ((cmd->cmdidx == MMC_CMD_SEND_TUNING_BLOCK ||
 	      cmd->cmdidx == MMC_CMD_SEND_TUNING_BLOCK_HS200) && !data))
@@ -280,15 +287,16 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
 	     cmd->cmdidx == MMC_CMD_SEND_TUNING_BLOCK_HS200) && !data)
 		mask = SDHCI_INT_DATA_AVAIL;
 
-	if (!(cmd->resp_type & MMC_RSP_PRESENT))
+	if (!(cmd->resp_type & MMC_RSP_PRESENT)) {
 		flags = SDHCI_CMD_RESP_NONE;
-	else if (cmd->resp_type & MMC_RSP_136)
+	} else if (cmd->resp_type & MMC_RSP_136) {
 		flags = SDHCI_CMD_RESP_LONG;
-	else if (cmd->resp_type & MMC_RSP_BUSY) {
+	} else if (cmd->resp_type & MMC_RSP_BUSY) {
 		flags = SDHCI_CMD_RESP_SHORT_BUSY;
 		mask |= SDHCI_INT_DATA_END;
-	} else
+	} else {
 		flags = SDHCI_CMD_RESP_SHORT;
+	}
 
 	if (cmd->resp_type & MMC_RSP_CRC)
 		flags |= SDHCI_CMD_CRC;
@@ -314,9 +322,9 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
 			sdhci_prepare_dma(host, data, &is_aligned, trans_bytes);
 		}
 
-		sdhci_writew(host, SDHCI_MAKE_BLKSZ(SDHCI_DEFAULT_BOUNDARY_ARG,
-				data->blocksize),
-				SDHCI_BLOCK_SIZE);
+		sdhci_writew(host,
+			     SDHCI_MAKE_BLKSZ(SDHCI_DEFAULT_BOUNDARY_ARG, data->blocksize),
+			     SDHCI_BLOCK_SIZE);
 		sdhci_writew(host, mode, SDHCI_TRANSFER_MODE);
 	} else if (cmd->resp_type & MMC_RSP_BUSY) {
 		sdhci_writeb(host, 0xe, SDHCI_TIMEOUT_CONTROL);
@@ -330,25 +338,23 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
 			break;
 
 		if (get_timer(start) >= SDHCI_READ_STATUS_TIMEOUT) {
-			if (host->quirks & SDHCI_QUIRK_BROKEN_R1B) {
+			if (host->quirks & SDHCI_QUIRK_BROKEN_R1B)
 				return 0;
-			} else {
-				printf("%s: Timeout for status update!\n",
-				       __func__);
-				return -ETIMEDOUT;
-			}
+
+			printf("%s: Timeout for status update!\n", __func__);
+			return -ETIMEDOUT;
 		}
 	} while ((stat & mask) != mask);
 
 	if ((stat & (SDHCI_INT_ERROR | mask)) == mask) {
 		sdhci_cmd_done(host, cmd);
 		sdhci_writel(host, mask, SDHCI_INT_STATUS);
-	} else
+	} else {
 		ret = -1;
-
-	if (!ret && data) {
-		ret = sdhci_transfer_data(host, data);
 	}
+
+	if (!ret && data)
+		ret = sdhci_transfer_data(host, data);
 
 	if (host->quirks & SDHCI_QUIRK_WAIT_SEND_CMD)
 		udelay(1000);
@@ -357,7 +363,7 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
 	sdhci_writel(host, SDHCI_INT_ALL_MASK, SDHCI_INT_STATUS);
 	if (!ret) {
 		if ((host->quirks & SDHCI_QUIRK_32BIT_DMA_ADDR) &&
-				!is_aligned && (data->flags == MMC_DATA_READ))
+		    !is_aligned && data->flags == MMC_DATA_READ)
 			memcpy(data->dest, host->align_buffer, trans_bytes);
 		return 0;
 	}
@@ -688,11 +694,11 @@ static int sdhci_set_ios(struct mmc *mmc)
 	if (mmc->bus_width == 8) {
 		ctrl &= ~SDHCI_CTRL_4BITBUS;
 		if ((SDHCI_GET_VERSION(host) >= SDHCI_SPEC_300) ||
-				(host->quirks & SDHCI_QUIRK_USE_WIDE8))
+		    (host->quirks & SDHCI_QUIRK_USE_WIDE8))
 			ctrl |= SDHCI_CTRL_8BITBUS;
 	} else {
 		if ((SDHCI_GET_VERSION(host) >= SDHCI_SPEC_300) ||
-				(host->quirks & SDHCI_QUIRK_USE_WIDE8))
+		    (host->quirks & SDHCI_QUIRK_USE_WIDE8))
 			ctrl &= ~SDHCI_CTRL_8BITBUS;
 		if (mmc->bus_width == 4)
 			ctrl |= SDHCI_CTRL_4BITBUS;
@@ -740,7 +746,7 @@ static int sdhci_init(struct mmc *mmc)
 			     &host->cd_gpio, GPIOD_IS_IN);
 
 	gpio_request_by_name(dev, "pwr-gpios", 0,
-      		     &host->pwr_gpio, GPIOD_IS_OUT);
+			     &host->pwr_gpio, GPIOD_IS_OUT);
 
 	if (dm_gpio_is_valid(&host->pwr_gpio))
 		dm_gpio_set_value(&host->pwr_gpio, 0);
@@ -865,11 +871,12 @@ static const struct mmc_ops sdhci_ops = {
 #endif
 
 int sdhci_setup_cfg(struct mmc_config *cfg, struct sdhci_host *host,
-		u32 f_max, u32 f_min)
+		    u32 f_max, u32 f_min)
 {
 	u32 caps, caps_1 = 0;
 #if CONFIG_IS_ENABLED(DM_MMC)
 	u64 dt_caps, dt_caps_mask;
+
 	dt_caps_mask = dev_read_u64_default(host->mmc->dev,
 					    "sdhci-caps-mask", 0);
 	dt_caps = dev_read_u64_default(host->mmc->dev,
@@ -947,13 +954,13 @@ int sdhci_setup_cfg(struct mmc_config *cfg, struct sdhci_host *host,
 		       __func__);
 		return -EINVAL;
 	}
-	if (f_max && (f_max < host->max_clk))
+	if (f_max && f_max < host->max_clk)
 		cfg->f_max = f_max;
 	else
 		cfg->f_max = host->max_clk;
-	if (f_min)
+	if (f_min) {
 		cfg->f_min = f_min;
-	else {
+	} else {
 		if (SDHCI_GET_VERSION(host) >= SDHCI_SPEC_300)
 			cfg->f_min = cfg->f_max / SDHCI_MAX_DIV_SPEC_300;
 		else
@@ -1036,7 +1043,7 @@ int add_sdhci(struct sdhci_host *host, u32 f_max, u32 f_min)
 		return ret;
 
 	host->mmc = mmc_create(&host->cfg, host);
-	if (host->mmc == NULL) {
+	if (!host->mmc) {
 		printf("%s: mmc create fail!\n", __func__);
 		return -ENOMEM;
 	}

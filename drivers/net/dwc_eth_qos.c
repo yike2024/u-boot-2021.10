@@ -85,7 +85,6 @@ static void *eqos_alloc_descs(struct eqos_priv *eqos, unsigned int num)
 				(unsigned int)ARCH_DMA_MINALIGN);
 	return memalign(eqos->desc_size, num * eqos->desc_size);
 #endif
-
 }
 
 static void eqos_free_descs(void *descs)
@@ -190,47 +189,48 @@ static int eqos_mdio_read_direct(struct udevice *dev, int mdio_addr, int mdio_de
 
 	return val;
 }
-#if 0
-static int eqos_mdio_write_direct(struct udevice *dev, int mdio_addr, int mdio_devad, int mdio_reg, u16 mdio_val)
-{
-	struct eqos_priv *eqos = dev_get_priv(dev);
-	u32 val;
-	int ret;
 
-	debug("%s(dev=%p, addr=%x, reg=%d, val=%x):\n", __func__, eqos->dev,
-	      mdio_addr, mdio_reg, mdio_val);
+//static int eqos_mdio_write_direct(struct udevice *dev, int mdio_addr,
+//				  int mdio_devad, int mdio_reg, u16 mdio_val)
+//{
+//	struct eqos_priv *eqos = dev_get_priv(dev);
+//	u32 val;
+//	int ret;
 
-	ret = eqos_mdio_wait_idle(eqos);
-	if (ret) {
-		pr_err("MDIO not idle at entry");
-		return ret;
-	}
+//	debug("%s(dev=%p, addr=%x, reg=%d, val=%x):\n", __func__, eqos->dev,
+//	      mdio_addr, mdio_reg, mdio_val);
 
-	writel(mdio_val, &eqos->mac_regs->mdio_data);
+//	ret = eqos_mdio_wait_idle(eqos);
+//	if (ret) {
+//		pr_err("MDIO not idle at entry");
+//		return ret;
+//	}
 
-	val = readl(&eqos->mac_regs->mdio_address);
-	val &= EQOS_MAC_MDIO_ADDRESS_SKAP |
-		EQOS_MAC_MDIO_ADDRESS_C45E;
-	val |= (mdio_addr << EQOS_MAC_MDIO_ADDRESS_PA_SHIFT) |
-		(mdio_reg << EQOS_MAC_MDIO_ADDRESS_RDA_SHIFT) |
-		(eqos->config->config_mac_mdio <<
-		 EQOS_MAC_MDIO_ADDRESS_CR_SHIFT) |
-		(EQOS_MAC_MDIO_ADDRESS_GOC_WRITE <<
-		 EQOS_MAC_MDIO_ADDRESS_GOC_SHIFT) |
-		EQOS_MAC_MDIO_ADDRESS_GB;
-	writel(val, &eqos->mac_regs->mdio_address);
+//	writel(mdio_val, &eqos->mac_regs->mdio_data);
 
-	udelay(eqos->config->mdio_wait);
+//	val = readl(&eqos->mac_regs->mdio_address);
+//	val &= EQOS_MAC_MDIO_ADDRESS_SKAP |
+//		EQOS_MAC_MDIO_ADDRESS_C45E;
+//	val |= (mdio_addr << EQOS_MAC_MDIO_ADDRESS_PA_SHIFT) |
+//		(mdio_reg << EQOS_MAC_MDIO_ADDRESS_RDA_SHIFT) |
+//		(eqos->config->config_mac_mdio <<
+//		 EQOS_MAC_MDIO_ADDRESS_CR_SHIFT) |
+//		(EQOS_MAC_MDIO_ADDRESS_GOC_WRITE <<
+//		 EQOS_MAC_MDIO_ADDRESS_GOC_SHIFT) |
+//		EQOS_MAC_MDIO_ADDRESS_GB;
+//	writel(val, &eqos->mac_regs->mdio_address);
 
-	ret = eqos_mdio_wait_idle(eqos);
-	if (ret) {
-		pr_err("MDIO read didn't complete");
-		return ret;
-	}
+//	udelay(eqos->config->mdio_wait);
 
-	return 0;
-}
-#endif
+//	ret = eqos_mdio_wait_idle(eqos);
+//	if (ret) {
+//		pr_err("MDIO read didn't complete");
+//		return ret;
+//	}
+
+//	return 0;
+//}
+
 #endif
 
 static int eqos_mdio_read(struct mii_dev *bus, int mdio_addr, int mdio_devad,
@@ -491,7 +491,7 @@ static int eqos_write_hwaddr(struct udevice *dev)
 {
 	struct eth_pdata *plat = dev_get_plat(dev);
 	struct eqos_priv *eqos = dev_get_priv(dev);
-	uint32_t val;
+	u32 val;
 
 	/*
 	 * This function may be called before start() or after stop(). At that
@@ -611,6 +611,7 @@ static int eqos_start(struct udevice *dev)
 	 */
 	if (!eqos->phy) {
 		int addr = -1;
+
 		addr = eqos_get_phy_addr(eqos, dev);
 		eqos->phy = phy_connect(eqos->mii, addr, dev,
 					eqos->config->interface(dev));
@@ -699,10 +700,10 @@ static int eqos_start(struct udevice *dev)
 			     EQOS_MTL_RXQ0_OPERATION_MODE_EHFC);
 
 		/*
-		 * Set Threshold for Activating Flow Contol space for min 2
+		 * Set Threshold for Activating Flow Control space for min 2
 		 * frames ie, (1500 * 1) = 1500 bytes.
 		 *
-		 * Set Threshold for Deactivating Flow Contol for space of
+		 * Set Threshold for Deactivating Flow Control for space of
 		 * min 1 frame (frame size 1500bytes) in receive fifo
 		 */
 		if (rqs == ((4096 / 256) - 1)) {
@@ -831,11 +832,13 @@ static int eqos_start(struct udevice *dev)
 
 	for (i = 0; i < EQOS_DESCRIPTORS_TX; i++) {
 		struct eqos_desc *tx_desc = eqos_get_desc(eqos, i, false);
+
 		eqos->config->ops->eqos_flush_desc(tx_desc);
 	}
 
 	for (i = 0; i < EQOS_DESCRIPTORS_RX; i++) {
 		struct eqos_desc *rx_desc = eqos_get_desc(eqos, i, true);
+
 		rx_desc->des0 = (u32)(ulong)(eqos->rx_dma_buf +
 					     (i * EQOS_MAX_PACKET_SIZE));
 #if IS_ENABLED(CONFIG_TARGET_CVITEK_CV186X)
@@ -843,6 +846,7 @@ static int eqos_start(struct udevice *dev)
 					(i * EQOS_MAX_PACKET_SIZE)) >> 32;
 #endif
 		rx_desc->des3 = EQOS_DESC3_OWN | EQOS_DESC3_BUF1V;
+		/*des3 could be change by dma and cpu*/
 		mb();
 		eqos->config->ops->eqos_flush_desc(rx_desc);
 		eqos->config->ops->eqos_inval_buffer(eqos->rx_dma_buf +
@@ -852,23 +856,23 @@ static int eqos_start(struct udevice *dev)
 
 #if IS_ENABLED(CONFIG_TARGET_CVITEK_CV186X)
 	writel((ulong)eqos_get_desc(eqos, 0, false) >> 32,
-		&eqos->dma_regs->ch0_txdesc_list_haddress);
+	       &eqos->dma_regs->ch0_txdesc_list_haddress);
 #else
 	writel(0, &eqos->dma_regs->ch0_txdesc_list_haddress);
 #endif
 	writel((ulong)eqos_get_desc(eqos, 0, false),
-		&eqos->dma_regs->ch0_txdesc_list_address);
+	       &eqos->dma_regs->ch0_txdesc_list_address);
 	writel(EQOS_DESCRIPTORS_TX - 1,
 	       &eqos->dma_regs->ch0_txdesc_ring_length);
 
 #if IS_ENABLED(CONFIG_TARGET_CVITEK_CV186X)
 	writel((ulong)eqos_get_desc(eqos, 0, true) >> 32,
-		&eqos->dma_regs->ch0_rxdesc_list_haddress);
+	       &eqos->dma_regs->ch0_rxdesc_list_haddress);
 #else
 	writel(0, &eqos->dma_regs->ch0_rxdesc_list_haddress);
 #endif
 	writel((ulong)eqos_get_desc(eqos, 0, true),
-		&eqos->dma_regs->ch0_rxdesc_list_address);
+	       &eqos->dma_regs->ch0_rxdesc_list_address);
 	writel(EQOS_DESCRIPTORS_RX - 1,
 	       &eqos->dma_regs->ch0_rxdesc_ring_length);
 
@@ -926,7 +930,8 @@ static void eqos_stop(struct udevice *dev)
 		u32 trcsts = (val >> EQOS_MTL_TXQ0_DEBUG_TRCSTS_SHIFT) &
 			EQOS_MTL_TXQ0_DEBUG_TRCSTS_MASK;
 		u32 txqsts = val & EQOS_MTL_TXQ0_DEBUG_TXQSTS;
-		if ((trcsts != 1) && (!txqsts))
+
+		if (trcsts != 1 && !txqsts)
 			break;
 	}
 
@@ -941,7 +946,7 @@ static void eqos_stop(struct udevice *dev)
 			EQOS_MTL_RXQ0_DEBUG_PRXQ_MASK;
 		u32 rxqsts = (val >> EQOS_MTL_RXQ0_DEBUG_RXQSTS_SHIFT) &
 			EQOS_MTL_RXQ0_DEBUG_RXQSTS_MASK;
-		if ((!prxq) && (!rxqsts))
+		if (!prxq && !rxqsts)
 			break;
 	}
 
@@ -949,9 +954,9 @@ static void eqos_stop(struct udevice *dev)
 	clrbits_le32(&eqos->dma_regs->ch0_rx_control,
 		     EQOS_DMA_CH0_RX_CONTROL_SR);
 
-	if (eqos->phy) {
+	if (eqos->phy)
 		phy_shutdown(eqos->phy);
-	}
+
 	eqos->config->ops->eqos_stop_resets(dev);
 
 	debug("%s: OK\n", __func__);
@@ -989,7 +994,7 @@ static int eqos_send(struct udevice *dev, void *packet, int length)
 	eqos->config->ops->eqos_flush_desc(tx_desc);
 
 	writel((ulong)eqos_get_desc(eqos, eqos->tx_desc_idx, false),
-		&eqos->dma_regs->ch0_txdesc_tail_pointer);
+	       &eqos->dma_regs->ch0_txdesc_tail_pointer);
 
 	for (i = 0; i < 1000000; i++) {
 		eqos->config->ops->eqos_inval_desc(tx_desc);
@@ -1049,6 +1054,7 @@ static int eqos_free_pkt(struct udevice *dev, uchar *packet, int length)
 	rx_desc = eqos_get_desc(eqos, eqos->rx_desc_idx, true);
 
 	rx_desc->des0 = 0;
+	/*des0 could be change by dma and cpu*/
 	mb();
 	eqos->config->ops->eqos_flush_desc(rx_desc);
 	eqos->config->ops->eqos_inval_buffer(packet, length);
@@ -1163,30 +1169,35 @@ static int eqos_mdio_register(struct udevice *dev)
 		/* find the phy ID or phy address which is connected to our MAC */
 		for (phyaddr = 0; phyaddr < 32; phyaddr++) {
 			val = eqos_mdio_read_direct(dev, phyaddr, 0, MII_PHYSID1);
-#if 0
-			printf("phy id1 detect:%#x\n", val);
-			val = eqos_mdio_read_direct(dev, phyaddr, 0, MII_PHYSID2);
-			printf("phy id2 detect:%#x\n", val);
-			if ((val == RTL_PHY_ID) && (phyaddr == 0))
-				continue;
-			val = eqos_mdio_read_direct(dev, phyaddr, 0, MII_BMSR);
-			if (val < 0) {
-				printf("Error reading the phy register MII_BMSR for phy ID/ADDR %d\n",
-				      phyaddr);
-			}
-#endif
+
+			// printf("phy id1 detect:%#x\n", val);
+			// val = eqos_mdio_read_direct(dev, phyaddr, 0, MII_PHYSID2);
+			// printf("phy id2 detect:%#x\n", val);
+			// if (val == RTL_PHY_ID && phyaddr == 0)
+			//	continue;
+			// val = eqos_mdio_read_direct(dev, phyaddr, 0, MII_BMSR);
+			// if (val < 0) {
+			//	printf("Error reading the phy register MII_BMSR
+			//	for phy ID/ADDR %d\n",
+			//	       phyaddr);
+			// }
+
 			if (val != 0x0000 && val != 0xffff) {
 				debug("phy detected at ADDR %d\n", phyaddr);
 				phy_detected = 1;
-#if 0
-				val = eqos_mdio_read_direct(dev, phyaddr, 0, MII_BMCR);
-				printf("phy ctrl:%#x\n", val);
-				eqos_mdio_write_direct(dev, phyaddr, 0, MII_BMCR, (val & ~BMCR_SPEED1000) & ~BMCR_SPEED100);//10M
-				// eqos_mdio_write_direct(dev, phyaddr, 0, MII_BMCR, (val & ~BMCR_SPEED1000) | BMCR_SPEED100);//100M
-				// eqos_mdio_write_direct(dev, phyaddr, 0, MII_BMCR, (val | BMCR_SPEED1000) & ~BMCR_SPEED100);//1000M
-				val = eqos_mdio_read_direct(dev, phyaddr, 0, MII_BMCR);
-				printf("phy ctrl:%#x\n", val);
-#endif
+
+				// val = eqos_mdio_read_direct(dev, phyaddr, 0, MII_BMCR);
+				// printf("phy ctrl:%#x\n", val);
+				////10M
+				// eqos_mdio_write_direct(dev, phyaddr, 0, MII_BMCR,
+				//	   (val & ~BMCR_SPEED1000) & ~BMCR_SPEED100);
+				// //eqos_mdio_write_direct(dev, phyaddr, 0, MII_BMCR,
+				//        (val & ~BMCR_SPEED1000) | BMCR_SPEED100);//100M
+				// //eqos_mdio_write_direct(dev, phyaddr, 0, MII_BMCR,
+				//        (val | BMCR_SPEED1000) & ~BMCR_SPEED100);//1000M
+				// val = eqos_mdio_read_direct(dev, phyaddr, 0, MII_BMCR);
+				// printf("phy ctrl:%#x\n", val);
+
 				break;
 			}
 		}

@@ -11,17 +11,11 @@
 #include <asm/io.h>
 #include <linux/io.h>
 #include <linux/bitops.h>
-#if IS_ENABLED(CONFIG_TARGET_CVITEK_CV181X)
-#include "../../board/cvitek/cv181x/cv181x_reg.h"
-#elif IS_ENABLED(CONFIG_TARGET_CVITEK_CV180X)
-#include "../../board/cvitek/cv180x/cv180x_reg.h"
-#elif IS_ENABLED(CONFIG_TARGET_CVITEK_CV186X)
 #include "../../board/cvitek/cv186x/cv186x_reg.h"
-#endif
 
 #define DW_WDT_CR	0x00
 #define DW_WDT_TORR	0x04
-#define DW_WDT_CCVR 0x08
+#define DW_WDT_CCVR	0x08
 #define DW_WDT_CRR	0x0C
 #define DW_WDT_TOC	0x1C
 
@@ -29,7 +23,7 @@
 #define DW_WDT_CR_RMOD_OFFSET	0x01
 #define DW_WDT_CRR_RESTART_VAL	0x76
 
-#define DW_WDT_MAX_TOP          15
+#define DW_WDT_MAX_TOP		15
 
 struct designware_wdt_priv {
 	void __iomem	*base;
@@ -54,7 +48,7 @@ static inline int dw_wdt_top_xlate_toc(unsigned int clk_khz, unsigned int top, u
 
 /*
  * Set the watchdog time interval.
- * Counter is 32 bit.
+ * Counter is 16 bit.
  */
 static int designware_wdt_settimeout(void __iomem *base, unsigned int clk_khz,
 				     unsigned int timeout)
@@ -75,6 +69,16 @@ static int designware_wdt_settimeout(void __iomem *base, unsigned int clk_khz,
 	writel(toc, base + DW_WDT_TOC);
 
 	return 0;
+}
+
+static int designware_wdt_gettimeout(void __iomem *base, unsigned int clk_khz)
+{
+	unsigned int toc, torr;
+
+	torr = readl(base + DW_WDT_TORR) & 0xF;
+	toc = readl(base + DW_WDT_TOC) & 0xFFFF;
+
+	return (toc << (torr + 1)) / clk_khz;
 }
 
 static void designware_wdt_enable(void __iomem *base)
@@ -154,6 +158,20 @@ static int designware_wdt_start(struct udevice *dev, u64 timeout, ulong flags)
 
 	/* reset the watchdog */
 	return designware_wdt_reset(dev);
+}
+
+static int designware_wdt_is_started(struct udevice *dev)
+{
+	struct designware_wdt_priv *priv = dev_get_priv(dev);
+
+	return designware_wdt_is_enabled(priv->base);
+}
+
+static int designware_wdt_get_timeout(struct udevice *dev)
+{
+	struct designware_wdt_priv *priv = dev_get_priv(dev);
+
+	return designware_wdt_gettimeout(priv->base, priv->clk_khz);
 }
 
 static int designware_wdt_expire_now(struct udevice *dev, ulong flags)
@@ -236,6 +254,8 @@ static const struct wdt_ops designware_wdt_ops = {
 	.reset = designware_wdt_reset,
 	.stop = designware_wdt_stop,
 	.expire_now = designware_wdt_expire_now,
+	.is_started = designware_wdt_is_started,
+	.get_timeout = designware_wdt_get_timeout,
 };
 
 static const struct udevice_id designware_wdt_ids[] = {

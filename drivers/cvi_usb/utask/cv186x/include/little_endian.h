@@ -5,8 +5,8 @@
 
 #define cpuToLe32(x) (x)
 #define le32ToCpu(x) (x)
-#define cpuToLe16(x) ((uint16_t)(x))
-#define le16ToCpu(x) ((uint16_t)(x))
+#define cvi_cpu_to_le32(x) ((uint16_t)(x))
+#define cvi_le16_to_cpu(x) ((uint16_t)(x))
 
 #define cpuToBe32(x) ((uint32_t)swap32(x))
 #define be32ToCpu(x) ((uint32_t)swap32(x))

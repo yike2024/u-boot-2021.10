@@ -492,7 +492,7 @@ int spi_mem_adjust_op_size(struct spi_slave *slave, struct spi_mem_op *op)
 		if (op->data.dir == SPI_MEM_DATA_IN) {
 			if (slave->max_read_size)
 				op->data.nbytes = min(op->data.nbytes,
-					      slave->max_read_size);
+						      slave->max_read_size);
 		} else if (slave->max_write_size) {
 			op->data.nbytes = min(op->data.nbytes,
 					      slave->max_write_size - len);

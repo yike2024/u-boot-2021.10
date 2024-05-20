@@ -454,23 +454,23 @@
  * Forward declarations
  **********************************************************************/
 struct CH9_UsbSetup;
-struct CH9_UsbDeviceDescriptor;
-struct CH9_UsbBosDescriptor;
-struct CH9_UsbCapabilityDescriptor;
+struct CH9_USBDEVICEDESCRIPTOR;
+struct CH9_USBBOSDESCRIPTOR;
+struct CH9_USBCAPABILITYDESCRIPTOR;
 struct CH9_Usb20ExtensionDescriptor;
 struct CH9_UsbSSDeviceCapabilityDescriptor;
 struct CH9_UsbContainerIdDescriptor;
 struct CH9_UsbPlatformDescriptor;
 struct CH9_UsbSSPlusDescriptor;
 struct CH9_UsbPTMCapabilityDescriptor;
-struct CH9_UsbConfigurationDescriptor;
+struct CH9_USBCONFIGURATIONDESCRIPTOR;
 struct CH9_UsbInterfaceAssociationDescriptor;
 struct CH9_UsbInterfaceDescriptor;
 struct CH9_UsbEndpointDescriptor;
 struct CH9_UsbSSEndpointCompanionDescriptor;
 struct CH9_UsbSSPlusIsocEndpointCompanionDescriptor;
 struct CH9_UsbStringDescriptor;
-struct CH9_UsbDeviceQualifierDescriptor;
+struct CH9_USBDEVICEQUALIFIERDESCRIPTOR;
 struct CH9_UsbOtherSpeedConfigurationDescriptor;
 struct CH9_UsbHeaderDescriptor;
 struct CH9_UsbOtgDescriptor;
@@ -509,7 +509,7 @@ typedef enum {
 	CH9_USB_SPEED_SUPER = 5,
     /** usb 3.1 GEN2 (10Gb/s) */
 	CH9_USB_SPEED_SUPER_PLUS = 6,
-} CH9_UsbSpeed;
+} CH9_USBSPEED;
 
 /**********************************************************************
  * Structures and unions
@@ -531,7 +531,7 @@ typedef struct CH9_UsbSetup {
 } __packed CH9_UsbSetup;
 
 /** Standard Device Descriptor (see Table 9-11 of USB Spec 3.1) */
-typedef struct CH9_UsbDeviceDescriptor {
+typedef struct CH9_USBDEVICEDESCRIPTOR {
     /** Size of descriptor */
 	uint8_t bLength;
     /** Device descriptor type */
@@ -560,10 +560,10 @@ typedef struct CH9_UsbDeviceDescriptor {
 	uint8_t iSerialNumber;
     /** Number of possible configurations */
 	uint8_t bNumConfigurations;
-} __packed CH9_UsbDeviceDescriptor;
+} __packed CH9_USBDEVICEDESCRIPTOR;
 
 /** Binary Device Object Store descriptor (see Table 9-12 of USB Spec 3.1) */
-typedef struct CH9_UsbBosDescriptor {
+typedef struct CH9_USBBOSDESCRIPTOR {
     /** Size of this descriptor */
 	uint8_t bLength;
     /** Descriptor type: BOS */
@@ -572,10 +572,10 @@ typedef struct CH9_UsbBosDescriptor {
 	uint16_t wTotalLength;
     /** The number of separate device capability descriptors in the BOS */
 	uint8_t bNumDeviceCaps;
-} __packed CH9_UsbBosDescriptor;
+} __packed CH9_USBBOSDESCRIPTOR;
 
 /** Device Capability Descriptor (see Table 9-12 of USB Spec 3.1) */
-typedef struct CH9_UsbCapabilityDescriptor {
+typedef struct CH9_USBCAPABILITYDESCRIPTOR {
     /** Size of this descriptor */
 	uint8_t bLength;
     /** Descriptor type: DEVICE CAPABILITY type */
@@ -584,7 +584,7 @@ typedef struct CH9_UsbCapabilityDescriptor {
 	uint8_t bDevCapabilityType;
     /** Capability specific format */
 	uint32_t bmAttributes;
-} __packed CH9_UsbCapabilityDescriptor;
+} __packed CH9_USBCAPABILITYDESCRIPTOR;
 
 /** USB 2.0 Extension Descriptor (see Table 9-15 of USB Spec 3.1) */
 typedef struct CH9_Usb20ExtensionDescriptor {
@@ -680,7 +680,7 @@ typedef struct CH9_UsbPTMCapabilityDescriptor {
 } __packed CH9_UsbPTMCapabilityDescriptor;
 
 /** Standard Configuration Descriptor (see Table 9-21 of USB Spec 3.1) */
-typedef struct CH9_UsbConfigurationDescriptor {
+typedef struct CH9_USBCONFIGURATIONDESCRIPTOR {
     /** Size of descriptor */
 	uint8_t bLength;
     /** Configuration descriptor type */
@@ -697,7 +697,7 @@ typedef struct CH9_UsbConfigurationDescriptor {
 	uint8_t bmAttributes;
     /** Maximum power consumption of the USB device */
 	uint8_t bMaxPower;
-} __packed CH9_UsbConfigurationDescriptor;
+} __packed CH9_USBCONFIGURATIONDESCRIPTOR;
 
 /** Standard Interface Association Descriptor  (see Table 9-22 of USB Spec 3.1) */
 typedef struct CH9_UsbInterfaceAssociationDescriptor {
@@ -803,7 +803,7 @@ typedef struct CH9_UsbStringDescriptor {
 } __packed CH9_UsbStringDescriptor;
 
 /** Standard Device Qualifier Descriptor (see Table 9-9 of USB Spec 2.0) */
-typedef struct CH9_UsbDeviceQualifierDescriptor {
+typedef struct CH9_USBDEVICEQUALIFIERDESCRIPTOR {
     /** Size of descriptor */
 	uint8_t bLength;
     /** Device Qualifier type */
@@ -822,7 +822,7 @@ typedef struct CH9_UsbDeviceQualifierDescriptor {
 	uint8_t bNumConfigurations;
     /** Reserved for future use */
 	uint8_t bReserved;
-} __packed CH9_UsbDeviceQualifierDescriptor;
+} __packed CH9_USBDEVICEQUALIFIERDESCRIPTOR;
 
 /** Standard Other_Speed_Configuration descriptor (see Table 9-11 of USB Spec 2.0) */
 typedef struct CH9_UsbOtherSpeedConfigurationDescriptor {

@@ -224,7 +224,7 @@
 		#define MTDIDS_DEFAULT ""
 	#endif
 
-	#ifdef CONFIG_ROOTFS_UBUNTU
+	#if defined(CONFIG_ROOTFS_UBUNTU) || defined(CONFIG_ROOTFS_DEBIAN)
 		#define CONFIG_EXTRA_ENV_SETTINGS	\
 		"devtype=mmc\0" \
 		"devnum=1\0" \
@@ -313,7 +313,7 @@
 				UBOOT_VBOOT_BOOTM_COMMAND \
 				"fi;"
 
-	#ifdef CONFIG_ROOTFS_UBUNTU
+	#if defined(CONFIG_ROOTFS_UBUNTU) || defined(CONFIG_ROOTFS_DEBIAN)
 		#define RECBOOTCOMMAND "setenv bootargs console=${consoledev},${baudrate} ${othbootargs}; " \
 		"load mmc 0:2 ${uImage_addr} recovery.itb;" \
 		"bootm ${uImage_addr}#config-" FDT_NO ";"

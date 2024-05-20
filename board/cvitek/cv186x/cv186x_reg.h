@@ -92,7 +92,7 @@
 
 #define SOFT_RSTN_1			(REG_SOFT_RST + 0x4)
 #define reg_soft_reset_x_usbsys	BIT(4)
-#define reg_soft_reset_x_usb0	BIT(5)
+#define REG_SOFT_RESET_X_USB0	BIT(5)
 #define reg_soft_reset_x_usb1	BIT(6)
 
 #define REG_TOP_USB_CTRSTS	(TOP_BASE + 0x38)
@@ -106,8 +106,8 @@
 #define REG_TOP_DDR_ADDR_MODE		(TOP_BASE + 0x64)
 
 #define USB_PHY0_TUNE_CTRL_REG1 (TOP_BASE + 0x44)
-#define reg_usb_phy0_pcs_rx_los_mask_val_Pos 13
-#define reg_usb_phy0_pcs_rx_los_mask_val_Msk (0x3ff << reg_usb_phy0_pcs_rx_los_mask_val_Pos)
+#define REG_USB_PHY0_PCS_RX_LOS_MASK_VAL_POS 13
+#define REG_USB_PHY0_PCS_RX_LOS_MASK_VAL_MSK (0x3ff << REG_USB_PHY0_PCS_RX_LOS_MASK_VAL_POS)
 
 // #define SEC_SUBSYS_BASE		0x33000000
 // #define CRYPTO_SIDE_OTP_BASE		(SEC_SUBSYS_BASE + 0x00050000)
@@ -128,22 +128,22 @@
 #define USB_DRD1_BASE       (USB_SUBSYS_BASE + 0x110000)
 
 #define REG_USB_SYS_REG_0100	(USB_SUBSYS_BASE + 0x100)
-#define reg_usb0_en			0x1
+#define REG_USB0_EN			0x1
 
 #define REG_USB_SYS_REG_010C	(USB_SUBSYS_BASE + 0x10C)
-#define reg_phy0_ref_clkdiv2		(1L << 0)
-#define reg_phy0_fsel_Pos			1
-#define reg_phy0_fsel_Msk			(0x3fL << reg_phy0_fsel_Pos)
+#define REG_PHY0_REF_CLKDIV2		BIT(0)
+#define REG_PHY0_FSEL_POS			1
+#define REG_PHY0_FSEL_MSK			(0x3fL << REG_PHY0_FSEL_POS)
 #define reg_phy0_mpll_multiplier_Pos	7
-#define reg_phy0_mpll_multiplier_Msk	(0x7fL << reg_phy0_mpll_multiplier_Pos)
-#define reg_phy0_ssc_ref_clk_sel_Pos	14
-#define reg_phy0_ssc_ref_clk_sel_Msk	(0x1ffL << reg_phy0_ssc_ref_clk_sel_Pos)
-#define reg_phy0_ref_ssp_en			(1L << 24)
+#define REG_PHY0_MPLL_MULTIPLIER_MSK	(0x7fL << reg_phy0_mpll_multiplier_Pos)
+#define REG_PHY0_SSC_REF_CLK_SEL_POS	14
+#define REG_PHY0_SSC_REF_CLK_SEL_MSK	(0x1ffL << REG_PHY0_SSC_REF_CLK_SEL_POS)
+#define REG_PHY0_REF_SSP_EN			BIT(24)
 
 #define REG_USB_SYS_REG_0114	(USB_SUBSYS_BASE + 0x114)
-#define reg_phy0_phy_reset			(1 << 5)
-#define reg_phy0_OTGSESSVLD0_Pos	1
-#define reg_phy0_OTGSESSVLD0_Msk	(1 << reg_phy0_OTGSESSVLD0_Pos)
+#define REG_PHY0_PHY_RESET			BIT(5)
+#define REG_PHY0_OTGSESSVLD0_POS	1
+#define REG_PHY0_OTGSESSVLD0_MSK	BIT(REG_PHY0_OTGSESSVLD0_POS)
 
 /* ethernet phy */
 #define ETH_PHY_BASE        0x03009000

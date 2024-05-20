@@ -72,8 +72,7 @@ void usb_gadget_unmap_request(struct usb_gadget *gadget,
  * This is called by device controller drivers in order to return the
  * completed request back to the gadget layer.
  */
-void usb_gadget_giveback_request(struct usb_ep *ep,
-		struct usb_request *req)
+void usb_gadget_giveback_request(struct usb_ep *ep, struct usb_request *req)
 {
 	req->complete(ep, req);
 }
@@ -143,21 +142,6 @@ static inline void usb_gadget_udc_stop(struct usb_udc *udc)
 }
 
 /**
- * usb_udc_release - release the usb_udc struct
- * @dev: the dev member within usb_udc
- *
- * This is called by driver's core in order to free memory once the last
- * reference is released.
- */
-// static void usb_udc_release(struct usb_udc *udc)
-// {
-// 	// struct usb_udc *udc;
-
-// 	// udc = container_of(dev, struct usb_udc, dev);
-// 	kfree(udc);
-// }
-
-/**
  * usb_add_gadget_udc_release - adds a new gadget to the udc class driver list
  * @parent: the parent device to this udc. Usually the controller driver's
  * device.
@@ -168,12 +152,6 @@ static inline void usb_gadget_udc_stop(struct usb_udc *udc)
  */
 int usb_add_gadget_udc_release(struct usb_gadget *gadget)
 {
-	// int			ret;
-
-	// udc = kzalloc(sizeof(*udc), GFP_KERNEL);
-	// if (!udc)
-	// 	goto err1;
-
 	dev_set_name(&gadget->dev, "gadget");
 	g_udc.gadget = gadget;
 
@@ -185,9 +163,6 @@ int usb_add_gadget_udc_release(struct usb_gadget *gadget)
 	mutex_unlock(&udc_lock);
 
 	return 0;
-
-// err1:
-// 	return ret;
 }
 
 /**
@@ -349,3 +324,4 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	mutex_unlock(&udc_lock);
 	return ret;
 }
+

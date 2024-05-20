@@ -1,4 +1,4 @@
-/*
+/* SPDX-License-Identifier: GPL-2.0+
  * Copyright (C) Cvitek Co., Ltd. 2019-2021. All rights reserved.
  *
  * File Name: cvi_spif.h
@@ -141,9 +141,9 @@ struct cvitek_spi_priv {
 };
 
 struct dmmr_reg_t {
-	uint8_t read_cmd;
-	uint32_t dummy_clock;
-	uint32_t reg_set;
+	u8 read_cmd;
+	u32 dummy_clock;
+	u32 reg_set;
 };
 
 const struct dmmr_reg_t dmmr_reg_set[16] = {

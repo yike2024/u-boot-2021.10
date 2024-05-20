@@ -41,6 +41,12 @@ config ROOTFS_UBUNTU
 	help
 	  Enable ubuntu file system.
 
+config ROOTFS_DEBIAN
+	bool "Enable debian file system"
+	default n
+	help
+	  Enable debian file system.
+
 config SYS_CONFIG_NAME
 	default "cv186x-asic" if TARGET_CVITEK_CV186X_ASIC
 	default "cv186x-palladium" if TARGET_CVITEK_CV186X_PALLADIUM

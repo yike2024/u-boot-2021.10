@@ -30,6 +30,24 @@ struct udevice;
 int wdt_start(struct udevice *dev, u64 timeout_ms, ulong flags);
 
 /*
+ * Add by sophon
+ * Is wdt started
+ *
+ * @dev: WDT Device
+ * @return: 1 if started, 0 didn't start
+ */
+int wdt_is_started(struct udevice *dev);
+
+/*
+ * Add by sophon
+ * Get wdt timeout config
+ *
+ * @dev: WDT Device
+ * @return: 0 if not start, timeout others
+ */
+int wdt_get_timeout(struct udevice *dev);
+
+/*
  * Stop the timer, thus disabling the Watchdog. Use wdt_start to start it again.
  *
  * @dev: WDT Device
@@ -74,6 +92,22 @@ struct wdt_ops {
 	 * @return: 0 if OK, -ve on error
 	 */
 	int (*start)(struct udevice *dev, u64 timeout_ms, ulong flags);
+	/*
+	 * Add by sophon
+	 * Is wdt started
+	 *
+	 * @dev: WDT Device
+	 * @return: 1 if started, 0 didn't start
+	 */
+	int (*is_started)(struct udevice *dev);
+	/*
+	 * Add by sophon
+	 * Get wdt timeout config
+	 *
+	 * @dev: WDT Device
+	 * @return: 0 if not start, timeout other
+	 */
+	int (*get_timeout)(struct udevice *dev);
 	/*
 	 * Stop the timer
 	 *

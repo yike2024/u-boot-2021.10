@@ -252,7 +252,7 @@ static struct hash_algo hash_algo[] = {
 		.name		= "sha256",
 		.digest_size	= SHA256_SUM_LEN,
 		.chunk_size	= CHUNKSZ_SHA256,
-#ifdef CONFIG_SHA_HW_ACCEL
+#if defined(CONFIG_SHA_HW_ACCEL) || defined(CONFIG_SOPHON_SPACC_SHA)
 		.hash_func_ws	= hw_sha256,
 #else
 		.hash_func_ws	= sha256_csum_wd,

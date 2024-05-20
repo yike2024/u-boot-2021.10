@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 #include <common.h>
 #include <linux/mtd/nand.h>
 #include "cvsnfc_spi_ids.h"
@@ -57,14 +58,16 @@ static int spi_general_wait_ready(struct cvsnfc_op *spi)
 	do {
 		spi_feature_op(host, GET_OP, STATUS_ADDR, &regval);
 		if (!(regval & STATUS_OIP_MASK)) {
-			if ((host->cmd_option.last_cmd == NAND_CMD_ERASE2) &&
-			    (regval & STATUS_E_FAIL_MASK)) {
-				printf("[%s: %d] waring: erase fail, regval=0x%x\n", __func__, __LINE__, regval);
+			if (host->cmd_option.last_cmd == NAND_CMD_ERASE2 &&
+			    regval & STATUS_E_FAIL_MASK) {
+				printf("[%s: %d] waring: erase fail, regval=0x%x\n", __func__,
+				       __LINE__, regval);
 				return regval;
 			}
-			if ((host->cmd_option.last_cmd == NAND_CMD_PAGEPROG) &&
-			    (regval & STATUS_P_FAIL_MASK)) {
-				printf("[%s: %d] waring: prog fail, regval=0x%x\n", __func__, __LINE__, regval);
+			if (host->cmd_option.last_cmd == NAND_CMD_PAGEPROG &&
+			    regval & STATUS_P_FAIL_MASK) {
+				printf("[%s: %d] waring: prog fail, regval=0x%x\n", __func__,
+				       __LINE__, regval);
 				return regval;
 			}
 			return 0;
@@ -72,7 +75,8 @@ static int spi_general_wait_ready(struct cvsnfc_op *spi)
 		udelay(1);
 	} while (deadline++ < (40 << 20));
 
-	printf("[%s: %d] waring: cvsnfc: wait ready timeout, regval=0x%x\n", __func__, __LINE__, regval);
+	printf("[%s: %d] waring: cvsnfc: wait ready timeout, regval=0x%x\n", __func__,
+	       __LINE__, regval);
 
 	return 1;
 }
@@ -92,7 +96,8 @@ static int spi_general_write_enable(struct cvsnfc_op *spi)
 	/* write enable */
 	cvsfc_write(host, REG_SPI_NAND_TRX_CMD0, SPI_NAND_CMD_WREN);
 
-	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) | BIT_REG_TRX_START);
+	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL0, cvsfc_read(host, REG_SPI_NAND_TRX_CTRL0) |
+	BIT_REG_TRX_START);
 
 	CVSNFC_CMD_WAIT_CPU_FINISH(host);
 	CVSNFC_CLEAR_INT(host);
@@ -114,11 +119,10 @@ static int spi_nand_esmt_ecc_enable(struct cvsnfc_op *spi)
 static int spi_nand_winbond_select_die(struct cvsnfc_op *spi, unsigned int id)
 {
 	struct cvsnfc_host *host = (struct cvsnfc_host *)spi->host;
-	static uint8_t pre_id = 0xff;
+	static u8 pre_id = 0xff;
 
-	if (id == pre_id) {
+	if (id == pre_id)
 		return 0;
-	}
 
 	// Select Die
 	cvsfc_write(host, REG_SPI_NAND_TRX_CTRL2, 0x1);
@@ -1029,7 +1033,6 @@ struct cvsnfc_chip_info cvsnfc_spi_nand_flash_table[] = {
 
 	/* TOSHIBA TC58CVG1S3HRAIJ 2Gbit */
 	{
-
 		.name      = "TC58CVG1S3HRAIJ",
 		.id        = {0x98, 0xeb, 0x40},
 		.id_len    = 3,
@@ -1056,7 +1059,6 @@ struct cvsnfc_chip_info cvsnfc_spi_nand_flash_table[] = {
 
 	/* TOSHIBA TC58CVG0S3HRAIJ 2Gbit */
 	{
-
 		.name      = "TC58CVG0S3HRAIJ",
 		.id        = {0x98, 0xc2},
 		.id_len    = 2,
@@ -1260,7 +1262,6 @@ struct cvsnfc_chip_info cvsnfc_spi_nand_flash_table[] = {
 
 	/* TOSHIBA TC58CVG1S3HxAIx 2Gbit */
 	{
-
 		.name      = "TC58CVG1S3HxAIx",
 		.id        = {0x98, 0xcb},
 		.id_len    = 2,
@@ -1412,11 +1413,12 @@ struct cvsnfc_chip_info cvsnfc_spi_nand_flash_table[] = {
 	{	.id_len    = 0,	},
 };
 
-static int do_spinand_show_support_list(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
+static int do_spinand_show_support_list(struct cmd_tbl *cmdtp, int flag,
+					int argc, char * const argv[])
 {
 	char buf[128] = {0};
 	struct cvsnfc_chip_info *info = cvsnfc_spi_nand_flash_table;
-	uint32_t id, size, i;
+	u32 id, size, i;
 
 	printf("\t###################### nand flash list #########################\n\n");
 
@@ -1437,7 +1439,8 @@ static int do_spinand_show_support_list(struct cmd_tbl *cmdtp, int flag, int arg
 	return 0;
 }
 
-U_BOOT_CMD(nandshow, 2, 0, do_spinand_show_support_list, "nandshow", "\nshow nand flash list\n");
+U_BOOT_CMD(nandshow, 2, 0, do_spinand_show_support_list, "nandshow",
+	   "\nshow nand flash list\n");
 
 static inline unsigned int ANY_BP_ENABLE(unsigned int val)
 {
@@ -1477,12 +1480,10 @@ static void cvsnfc_spi_probe(struct cvsnfc_host *host,
 		regval &= ~ALL_BP_MASK;
 		spi_feature_op(host, SET_OP, PROTECTION_ADDR, &regval);
 
-
 		spi->driver->wait_ready(spi);
 		spi_feature_op(host, GET_OP, PROTECTION_ADDR, &regval);
-		if (ANY_BP_ENABLE(regval)) {
+		if (ANY_BP_ENABLE(regval))
 			printf("%s write protection disable fail! val[%#x]\n", __func__, regval);
-		}
 	}
 }
 
@@ -1507,16 +1508,17 @@ static void dump_nand_info(struct cvsnfc_chip_info *nandinfo)
 	pr_info("chip size=%lldMB, diesize=%lldMB, erase size=%dKB\n", (nandinfo->chipsize >> 20),
 		(nandinfo->diesize >> 20), (nandinfo->erasesize >> 10));
 
-	pr_info("page size=%dKB, oob size=%dB, badblock_pos=0x%x, flags=0x%x\n", (nandinfo->pagesize >> 10),
-		nandinfo->oobsize, nandinfo->badblock_pos, nandinfo->flags);
+	pr_info("page size=%dKB, oob size=%dB, badblock_pos=0x%x, flags=0x%x\n",
+		(nandinfo->pagesize >> 10), nandinfo->oobsize, nandinfo->badblock_pos,
+	nandinfo->flags);
 
 	pr_info("ECC enable offset=0x%x, ECC_EN mask=0x%x, STATUS offset=0x%x, STATUS mask=0x%x\n",
 		nandinfo->ecc_en_feature_offset, nandinfo->ecc_en_mask, nandinfo->ecc_status_offset,
 		nandinfo->ecc_status_mask);
 	pr_info("STATUS shift=%d, STATUS valid_val=0x%x\n", nandinfo->ecc_status_shift,
 		nandinfo->ecc_status_uncorr_val);
-	pr_info("sck_l=%d, sck_h=%d, max_freq=0x%x, sample_param=0x%x\n", nandinfo->sck_l, nandinfo->sck_h,
-		nandinfo->max_freq, nandinfo->sample_param);
+	pr_info("sck_l=%d, sck_h=%d, max_freq=0x%x, sample_param=0x%x\n", nandinfo->sck_l,
+		nandinfo->sck_h, nandinfo->max_freq, nandinfo->sample_param);
 	pr_info("xtal_switch=%d\n", nandinfo->xtal_switch);
 
 	pr_info("\n");
@@ -1536,7 +1538,6 @@ static struct nand_flash_dev *spi_nand_get_flash_info(struct mtd_info *mtd,
 
 	// find match device ID and assign correct parameter and ops
 	for (; spi_dev->id_len; spi_dev++) {
-
 		if (memcmp(byte, spi_dev->id, DEFAULT_ID_LEN))
 			continue;
 
@@ -1596,7 +1597,8 @@ static struct nand_flash_dev *spi_nand_get_flash_info(struct mtd_info *mtd,
 
 		dump_nand_info(host->nand_chip_info);
 
-		if ((host->nand_chip_info->flags & FLAGS_SET_QE_BIT) && host->nand_chip_info->driver->qe_enable)
+		if ((host->nand_chip_info->flags & FLAGS_SET_QE_BIT) &&
+		    host->nand_chip_info->driver->qe_enable)
 			host->nand_chip_info->driver->qe_enable(host->spi);
 
 		return flash_type;
