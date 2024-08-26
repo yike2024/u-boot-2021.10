@@ -313,6 +313,11 @@
 				UBOOT_VBOOT_BOOTM_COMMAND \
 				"fi;"
 
+	#define CONFIG_RAMBOOTCOMMAND \
+				SET_BOOTARGS \
+				"echo Boot from ramboot.itb;" \
+				UBOOT_VBOOT_BOOTM_COMMAND
+
 	#if defined(CONFIG_ROOTFS_UBUNTU) || defined(CONFIG_ROOTFS_DEBIAN)
 		#define RECBOOTCOMMAND "setenv bootargs console=${consoledev},${baudrate} ${othbootargs}; " \
 		"load mmc 0:2 ${uImage_addr} recovery.itb;" \
@@ -320,7 +325,7 @@
 
 		#define CONFIG_BOOTCOMMAND "cvi_update || load mmc 0:1 ${scriptaddr} boot.scr.emmc; source ${scriptaddr}"
 	#else
-		#define CONFIG_BOOTCOMMAND	SHOWLOGOCMD "cvi_update || run emmcboot || run norboot || run nandboot"
+		#define CONFIG_BOOTCOMMAND	SHOWLOGOCMD "cvi_update || run ramboot || run emmcboot || run norboot || run nandboot"
 	#endif
 
 	#if defined(CONFIG_NAND_SUPPORT)
