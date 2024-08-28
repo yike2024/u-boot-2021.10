@@ -55,6 +55,12 @@
 #define GICD_BASE			(0x50001000)
 #define GICC_BASE			(0x50002000)
 
+/* RTC SRAM last 256bytes for oem info */
+#define CONSOLE_OEM_INFO   (0x5200000 + 0x7f82) //1byte for console selsect
+#define CONSOLE_USE_UART0  (0x00)
+#define CONSOLE_USE_UART2  (0x02)
+#define DTSTYPE_OEM_INFO   (0x5200000 + 0x7fA0) //32byte for dts type
+
 /* Size of malloc() pool */
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + (9 << 20))
 
@@ -71,7 +77,10 @@
 
 /* 16550 Serial Configuration */
 #define CONFIG_CONS_INDEX		1
+//Debug->UART0
 #define CONFIG_SYS_NS16550_COM1		0x29180000
+//Debug->UART2
+#define CONFIG_SYS_NS16550_COM3		0x291a0000 
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	(-4)
 #define CONFIG_SYS_NS16550_MEM32
@@ -206,7 +215,8 @@
 	#define PARTS  PART_LAYOUT
 
 	/* config uart */
-	#define CONSOLEDEV "ttyS0\0"
+	//#define CONSOLEDEV "ttyS0\0"
+	#define CONSOLEDEV "ttyS2\0"
 
 	/* config loglevel */
 	#ifdef RELEASE
@@ -313,11 +323,6 @@
 				UBOOT_VBOOT_BOOTM_COMMAND \
 				"fi;"
 
-	#define CONFIG_RAMBOOTCOMMAND \
-				SET_BOOTARGS \
-				"echo Boot from ramboot.itb;" \
-				UBOOT_VBOOT_BOOTM_COMMAND
-
 	#if defined(CONFIG_ROOTFS_UBUNTU) || defined(CONFIG_ROOTFS_DEBIAN)
 		#define RECBOOTCOMMAND "setenv bootargs console=${consoledev},${baudrate} ${othbootargs}; " \
 		"load mmc 0:2 ${uImage_addr} recovery.itb;" \
@@ -325,7 +330,7 @@
 
 		#define CONFIG_BOOTCOMMAND "cvi_update || load mmc 0:1 ${scriptaddr} boot.scr.emmc; source ${scriptaddr}"
 	#else
-		#define CONFIG_BOOTCOMMAND	SHOWLOGOCMD "cvi_update || run ramboot || run emmcboot || run norboot || run nandboot"
+		#define CONFIG_BOOTCOMMAND	SHOWLOGOCMD "cvi_update || run emmcboot || run norboot || run nandboot"
 	#endif
 
 	#if defined(CONFIG_NAND_SUPPORT)

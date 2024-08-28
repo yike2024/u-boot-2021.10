@@ -1,0 +1,1 @@
+../../build/output/bm1688_wevb_emmc/cvi_board_memmap.h

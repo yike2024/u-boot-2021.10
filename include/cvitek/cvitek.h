@@ -1,0 +1,1 @@
+/media/oscar/Basislink/BM1688/SDK-1.7/SourceCode/build/boards/sophon/bm1688_wevb_emmc/u-boot/cvitek.h
